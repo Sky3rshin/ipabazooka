@@ -160,13 +160,14 @@ jobs:
           path: packages
 
       - name: Install, check and open the app
-        run: sh packaging/linux/ci-test.sh "${{ matrix.kind }}" packages shots
+        # (not "shots/": that folder in the repo holds development screenshots)
+        run: sh packaging/linux/ci-test.sh "${{ matrix.kind }}" packages ci-shots
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: screenshot-${{ strategy.job-index }}-${{ matrix.kind }}
-          path: shots/*.png
+          path: ci-shots/*.png
           if-no-files-found: ignore
 
   release:
