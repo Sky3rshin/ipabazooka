@@ -1,0 +1,47 @@
+ipabazooka 1.3.0 — install apps on your iPhone or iPad from Windows
+
+NEW TO SIDELOADING?
+  Open the app and click "? Help" at the top, next to Theme. It explains
+  what sideloading is, how to get an app file (.ipa), and how to use the
+  app step by step.
+====================================================================
+
+WHAT'S IN THIS FOLDER
+  ipabazooka.exe   The whole app in one file. No installer needed.
+
+PUT IT ON ANOTHER COMPUTER
+  1. Copy ipabazooka.exe to the other PC (USB stick, OneDrive, email, etc.)
+     — or copy the zip file and unzip it there.
+  2. Double-click ipabazooka.exe to start it. You can drag it to the Desktop
+     or pin it to the taskbar if you like.
+  3. If Windows shows "Windows protected your PC", click "More info", then
+     "Run anyway". This appears for apps that aren't from the Microsoft Store
+     or a paid code-signing certificate.
+
+THE OTHER PC ALSO NEEDS (same as Sideloadly)
+  * The WEB versions of iTunes and iCloud for Windows, from apple.com
+    (not the Microsoft Store versions — uninstall those first):
+      - iTunes: lets the app see your iPhone over USB.
+      - iCloud: lets the app make Apple's sign-in data on that PC, which is
+        what makes Apple ID sign-in work reliably.
+  * Windows 10 or 11 (64-bit).
+
+FIRST RUN ON THE NEW PC
+  * Plug in the iPhone with a cable, unlock it and tap "Trust".
+  * Your theme choice and logs are kept per PC in %APPDATA%\ipabazooka
+    (paste that into the File Explorer address bar to open it).
+  * The first install on a new PC may ask you to pick an old signing
+    certificate to revoke — that's normal for free Apple IDs.
+
+KEYS
+  Alt+S   Start (when an app and a device are chosen)
+  Alt+.   Show or hide the status history (the full log)
+  Alt+V   Show or hide Advanced options
+  F11     Full screen (Esc leaves it)
+
+THEMES
+  Pick one from the "Theme" menu in the top-right corner:
+  Hacker, Normal, Black & White, White on Black, Pink, Midnight, Sunset,
+  Ocean, Catppuccin Mocha, Catppuccin Latte, Nord, Everforest,
+  Solarized Dark, Solarized Light, Dracula, Tokyo Night, Gruvbox,
+  Rosé Pine, One Dark, Monokai, Synthwave, Lava and Aurora.
