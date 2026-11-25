@@ -53,7 +53,9 @@ if [ "$found" = no ]; then
     fi
     case " $id $like " in
         *" debian "*|*" ubuntu "*) cmd="sudo apt install usbmuxd" ;;
-        *" fedora "*|*" rhel "*|*" centos "*) cmd="sudo dnf install usbmuxd" ;;
+        # RHEL and its rebuilds (whose ID_LIKE also says fedora) get usbmuxd from EPEL
+        *" rhel "*|*" centos "*) cmd="sudo dnf install epel-release, then: sudo dnf install usbmuxd" ;;
+        *" fedora "*) cmd="sudo dnf install usbmuxd" ;;
         *" suse "*|*" opensuse "*) cmd="sudo zypper install usbmuxd" ;;
         *" arch "*) cmd="sudo pacman -S usbmuxd" ;;
         *" void "*) cmd="sudo xbps-install usbmuxd" ;;

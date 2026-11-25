@@ -9,8 +9,13 @@ NEW TO SIDELOADING?
 WHICH DOWNLOAD SHOULD I USE?
   Debian, Ubuntu, Linux Mint, Pop!_OS, Zorin, elementary:
       sudo apt install ./ipabazooka_@VERSION@_amd64.deb
-  Fedora, RHEL, AlmaLinux, Rocky, Nobara:
+  Fedora, Nobara:
       sudo dnf install ./ipabazooka-@VERSION@-1.x86_64.rpm
+  RHEL, AlmaLinux, Rocky 10 (usbmuxd comes from EPEL):
+      sudo dnf install epel-release
+      sudo dnf install ./ipabazooka-@VERSION@-1.x86_64.rpm
+    (Version 9 doesn't package usbmuxd at all; the app installs and runs,
+    but you'd need to build usbmuxd yourself to connect a phone.)
   openSUSE:
       sudo zypper install --allow-unsigned-rpm ./ipabazooka-@VERSION@-1.x86_64.rpm
   Arch, Manjaro, EndeavourOS, CachyOS, Garuda:
@@ -39,7 +44,9 @@ YOU ALSO NEED usbmuxd
   iPad over USB (the Linux version of what iTunes provides on Windows).
   The .deb, .rpm and Arch packages install it automatically. Otherwise:
       Debian / Ubuntu / Mint:    sudo apt install usbmuxd
-      Fedora / RHEL:             sudo dnf install usbmuxd
+      Fedora:                    sudo dnf install usbmuxd
+      RHEL / Alma / Rocky 10:    sudo dnf install epel-release
+                                 sudo dnf install usbmuxd
       openSUSE:                  sudo zypper install usbmuxd
       Arch / Manjaro:            sudo pacman -S usbmuxd
       Void:                      sudo xbps-install usbmuxd

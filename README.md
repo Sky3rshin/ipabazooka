@@ -186,7 +186,8 @@ Pick the download for your distribution from the **[latest release](https://gith
 | Your distribution | Download | Install it with |
 |---|---|---|
 | **Debian, Ubuntu, Linux Mint, Pop!_OS, Zorin, elementary** | `ipabazooka_<version>_amd64.deb` | `sudo apt install ./ipabazooka_*_amd64.deb` |
-| **Fedora, RHEL, AlmaLinux, Rocky, Nobara** | `ipabazooka-<version>-1.x86_64.rpm` | `sudo dnf install ./ipabazooka-*.x86_64.rpm` |
+| **Fedora, Nobara** | `ipabazooka-<version>-1.x86_64.rpm` | `sudo dnf install ./ipabazooka-*.x86_64.rpm` |
+| **RHEL, AlmaLinux, Rocky 10** | `ipabazooka-<version>-1.x86_64.rpm` | `sudo dnf install epel-release`, then `sudo dnf install ./ipabazooka-*.x86_64.rpm` |
 | **openSUSE Tumbleweed / Leap** | `ipabazooka-<version>-1.x86_64.rpm` | `sudo zypper install --allow-unsigned-rpm ./ipabazooka-*.x86_64.rpm` |
 | **Arch, Manjaro, EndeavourOS, CachyOS, Garuda** | `ipabazooka-<version>-1-x86_64.pkg.tar.zst` | `sudo pacman -U ./ipabazooka-*-x86_64.pkg.tar.zst` |
 | **Any distribution, nothing to install** | `ipabazooka-<version>-x86_64.AppImage` | `chmod +x ipabazooka-*.AppImage` then run it |
@@ -203,7 +204,8 @@ Pick the download for your distribution from the **[latest release](https://gith
 - **64-bit (x86_64) Linux with glibc 2.28 or newer**: Debian 10+, Ubuntu 20.04+, Fedora 29+, RHEL/AlmaLinux/Rocky 8+, openSUSE Leap 15+, Arch and its relatives. Alpine and other musl-based systems aren't supported.
 - **A graphical desktop**: X11 or Wayland (GNOME, KDE Plasma, Xfce, Cinnamon, MATE and others).
 - The "choose a file" window uses your desktop's file picker (`xdg-desktop-portal`), or `zenity` if that isn't available. Dragging an `.ipa` onto the window always works.
-- Every package is tested automatically on Debian 12 and 13, Ubuntu 22.04 and 24.04, Fedora, AlmaLinux 9, openSUSE Tumbleweed and Arch Linux by [installing it on a fresh system and opening the app](https://github.com/Sky3rshin/ipabazooka/actions/workflows/linux.yml).
+- **RHEL, AlmaLinux and Rocky:** `usbmuxd` comes from [EPEL](https://docs.fedoraproject.org/en-US/epel/) on version 10, so enable EPEL first. Version 9 doesn't package `usbmuxd` at all, not even in EPEL 9. The `.rpm` still installs and runs there, but you'd have to build `usbmuxd` yourself to connect a phone, so version 10 or Fedora is the easier choice.
+- Every package is tested automatically on Debian 12 and 13, Ubuntu 22.04 and 24.04, Fedora, AlmaLinux 9 and 10, openSUSE Tumbleweed and Arch Linux by [installing it on a fresh system and opening the app](https://github.com/Sky3rshin/ipabazooka/actions/workflows/linux.yml).
 - **Arch users:** the release also includes the `PKGBUILD`, so you can build the package yourself with `makepkg -si`.
 - **Check your download:** `sha256sum ipabazooka*` should match `SHA256SUMS-linux.txt` on the release page.
 
@@ -236,7 +238,7 @@ You only need to do this **once per computer**.
 
 | You need | Why |
 |---|---|
-| **usbmuxd** | It lets ipabazooka see your iPhone over USB. The `.deb`, `.rpm` and Arch packages install it automatically. Linux starts it by itself whenever you plug in a phone. |
+| **usbmuxd** | It lets ipabazooka see your iPhone over USB. The `.deb`, `.rpm` and Arch packages install it automatically (on RHEL/Alma/Rocky 10, enable EPEL first). Linux starts it by itself whenever you plug in a phone. If it's missing, the app shows the exact command to install it on your distribution. |
 
 On Linux, Apple's sign-in data comes from online sign-in servers, because iCloud for Windows doesn't exist there. Nothing to install.
 
@@ -676,7 +678,7 @@ sh packaging/linux/build-packages.sh target/x86_64-unknown-linux-gnu/release/ipa
 | `vendor/isideload/` | Patched copy of the isideload library (see its `NOTICE.md`) |
 | `dist/READ ME FIRST.txt` | The read-me that ships in the Windows zip |
 | `packaging/linux/` | Linux packaging: icons, menu entry, `.ipa` file type, `.deb`/`.rpm`/Arch/AppImage recipes, install scripts, and the CI test script |
-| `.github/workflows/linux.yml` | Builds, packages and tests the Linux version on 10 distribution setups |
+| `.github/workflows/linux.yml` | Builds, packages and tests the Linux version on 11 distribution setups |
 | `docs/` | README logo and screenshots |
 | `MECHANICS.md`, `mechanics.json` | Notes on the behaviour rules the app follows |
 | `shots/` | Development screenshots |

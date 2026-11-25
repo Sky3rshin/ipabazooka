@@ -140,7 +140,8 @@ jobs:
           - { name: "Ubuntu 22.04", image: "ubuntu:22.04", kind: deb }
           - { name: "Ubuntu 24.04", image: "ubuntu:24.04", kind: deb }
           - { name: "Fedora", image: "fedora:latest", kind: rpm }
-          - { name: "AlmaLinux 9 (RHEL)", image: "almalinux:9", kind: rpm }
+          - { name: "AlmaLinux 9 (RHEL 9)", image: "almalinux:9", kind: rhel9 }
+          - { name: "AlmaLinux 10 + EPEL (RHEL 10)", image: "almalinux:10", kind: rhel-epel }
           - { name: "openSUSE Tumbleweed", image: "opensuse/tumbleweed:latest", kind: suse }
           - { name: "Arch Linux", image: "archlinux:latest", kind: arch }
           - { name: "AppImage on Ubuntu 24.04", image: "ubuntu:24.04", kind: appimage }

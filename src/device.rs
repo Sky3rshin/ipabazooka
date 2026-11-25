@@ -82,6 +82,49 @@ fn usbmuxd_installed() -> bool {
     .any(|p| std::path::Path::new(p).exists())
 }
 
+/// The command that installs usbmuxd on this distribution (from /etc/os-release).
+#[cfg(not(windows))]
+fn usbmuxd_install_hint() -> String {
+    let release = std::fs::read_to_string("/etc/os-release").unwrap_or_default();
+    install_hint_for(&release)
+}
+
+#[cfg_attr(windows, allow(dead_code))]
+fn install_hint_for(os_release: &str) -> String {
+    let field = |key: &str| -> String {
+        os_release
+            .lines()
+            .find_map(|l| l.strip_prefix(&format!("{key}=")))
+            .map(|v| v.trim().trim_matches('"').to_lowercase())
+            .unwrap_or_default()
+    };
+    let id = field("ID");
+    let like = field("ID_LIKE");
+    let is = |names: &[&str]| names.iter().any(|n| id == *n);
+    let like_any = |names: &[&str]| names.iter().any(|n| like.split_whitespace().any(|w| w == *n));
+    let cmd = if is(&["rhel", "centos", "almalinux", "rocky", "ol", "eurolinux", "circle"]) {
+        // RHEL and its rebuilds ship usbmuxd only through EPEL (EPEL 10 and newer)
+        "sudo dnf install epel-release, then: sudo dnf install usbmuxd"
+    } else if is(&["fedora", "nobara", "ultramarine"]) {
+        "sudo dnf install usbmuxd"
+    } else if is(&["debian", "ubuntu"]) || like_any(&["debian", "ubuntu"]) {
+        "sudo apt install usbmuxd"
+    } else if id.contains("suse") || like_any(&["suse", "opensuse"]) {
+        "sudo zypper install usbmuxd"
+    } else if is(&["arch"]) || like_any(&["arch"]) {
+        "sudo pacman -S usbmuxd"
+    } else if is(&["void"]) {
+        "sudo xbps-install usbmuxd"
+    } else if like_any(&["rhel", "centos"]) {
+        "sudo dnf install epel-release, then: sudo dnf install usbmuxd"
+    } else if like_any(&["fedora"]) {
+        "sudo dnf install usbmuxd"
+    } else {
+        "your package manager (the package is called usbmuxd)"
+    };
+    cmd.to_string()
+}
+
 #[cfg(not(windows))]
 fn connect() -> Result<Box<dyn MuxStream>, Unreachable> {
     use std::os::unix::net::UnixStream;
@@ -115,11 +158,11 @@ fn connect() -> Result<Box<dyn MuxStream>, Unreachable> {
             if idle && usbmuxd_installed() {
                 Err(Unreachable::Idle)
             } else if idle {
-                Err(Unreachable::Missing(
+                Err(Unreachable::Missing(format!(
                     "usbmuxd (the service that lets Linux talk to an iPhone or iPad) isn't installed. \
-                     Install it with your package manager, for example: sudo apt install usbmuxd"
-                        .to_string(),
-                ))
+                     Install it with: {}",
+                    usbmuxd_install_hint()
+                )))
             } else {
                 Err(Unreachable::Missing(format!("Couldn't reach usbmuxd ({USBMUXD_SOCKET}): {e}")))
             }
@@ -264,4 +307,24 @@ pub fn list_devices() -> Result<Vec<Device>, String> {
         devices.push(dev);
     }
     Ok(devices)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::install_hint_for;
+
+    #[test]
+    fn usbmuxd_install_hint_matches_the_distribution() {
+        let os = |id: &str, like: &str| format!("NAME=\"X\"\nID={id}\nID_LIKE=\"{like}\"\n");
+        assert_eq!(install_hint_for(&os("ubuntu", "debian")), "sudo apt install usbmuxd");
+        assert_eq!(install_hint_for(&os("linuxmint", "ubuntu debian")), "sudo apt install usbmuxd");
+        assert_eq!(install_hint_for(&os("debian", "")), "sudo apt install usbmuxd");
+        assert_eq!(install_hint_for(&os("fedora", "")), "sudo dnf install usbmuxd");
+        assert!(install_hint_for(&os("almalinux", "rhel centos fedora")).contains("epel-release"));
+        assert!(install_hint_for(&os("rocky", "rhel centos fedora")).contains("epel-release"));
+        assert_eq!(install_hint_for(&os("opensuse-tumbleweed", "opensuse suse")), "sudo zypper install usbmuxd");
+        assert_eq!(install_hint_for(&os("arch", "")), "sudo pacman -S usbmuxd");
+        assert_eq!(install_hint_for(&os("endeavouros", "arch")), "sudo pacman -S usbmuxd");
+        assert!(install_hint_for("").contains("usbmuxd"));
+    }
 }

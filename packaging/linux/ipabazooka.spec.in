@@ -12,8 +12,10 @@ License:        LicenseRef-All-Rights-Reserved AND MIT
 URL:            https://github.com/Sky3rshin/ipabazooka
 BuildArch:      x86_64
 
-# usbmuxd lets Linux talk to an iPhone or iPad over USB
-Requires:       usbmuxd
+# usbmuxd lets Linux talk to an iPhone or iPad over USB. It's a weak
+# dependency because RHEL/Alma/Rocky 9 don't package it (not even EPEL 9);
+# Fedora and openSUSE install it automatically, RHEL 10 gets it from EPEL.
+Recommends:     usbmuxd
 # graphics and keyboard libraries the window loads at run time (X11 and Wayland)
 Requires:       libGL.so.1()(64bit)
 Requires:       libEGL.so.1()(64bit)

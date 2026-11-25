@@ -8,7 +8,7 @@
 #   * the app opens and draws its window on a virtual screen (saved as a PNG)
 #   * its data folder is private to the user
 #
-# Usage: ci-test.sh <deb|rpm|suse|arch|appimage|tarball> <packages-dir> <screenshot-dir>
+# Usage: ci-test.sh <deb|rpm|rhel9|rhel-epel|suse|arch|appimage|tarball> <packages-dir> <screenshot-dir>
 set -eux
 
 kind=$1
@@ -18,6 +18,10 @@ shots=$(cd "$3" && pwd)
 . /etc/os-release
 distro="${ID}-${VERSION_ID:-rolling}"
 system_install=yes
+# should the package manager have brought usbmuxd along?
+expect_usbmuxd=yes
+# must the app be opened on a virtual screen? (skipped only where no Xvfb exists)
+need_screenshot=yes
 
 case "$kind" in
 deb)
@@ -33,6 +37,25 @@ rpm)
     dnf install -y xorg-x11-server-Xvfb xorg-x11-xauth mesa-dri-drivers desktop-file-utils
     exe=/usr/bin/ipabazooka
     theme=catppuccin-mocha
+    ;;
+rhel9)
+    # RHEL/Alma/Rocky 9 don't package usbmuxd (not even EPEL 9): the package
+    # must still install and open, and the app then says usbmuxd is missing
+    dnf install -y "$pkgs"/ipabazooka-*.x86_64.rpm
+    dnf install -y xorg-x11-server-Xvfb xorg-x11-xauth mesa-dri-drivers desktop-file-utils
+    exe=/usr/bin/ipabazooka
+    theme=dracula
+    expect_usbmuxd=no
+    ;;
+rhel-epel)
+    # RHEL/Alma/Rocky 10: usbmuxd comes from EPEL
+    dnf install -y epel-release
+    dnf install -y "$pkgs"/ipabazooka-*.x86_64.rpm
+    dnf install -y desktop-file-utils
+    dnf install -y xorg-x11-server-Xvfb xorg-x11-xauth mesa-dri-drivers || true
+    exe=/usr/bin/ipabazooka
+    theme=gruvbox
+    need_screenshot=no
     ;;
 suse)
     zypper --non-interactive refresh
@@ -92,8 +115,10 @@ if [ "$system_install" = yes ]; then
     done
     test -f /usr/share/mime/packages/ipabazooka.xml
     test -f /usr/share/metainfo/io.github.sky3rshin.ipabazooka.metainfo.xml
-    # usbmuxd came along as a dependency
-    command -v usbmuxd || ls /usr/sbin/usbmuxd /usr/bin/usbmuxd 2>/dev/null
+    if [ "$expect_usbmuxd" = yes ]; then
+        # usbmuxd came along as a dependency
+        command -v usbmuxd || ls /usr/sbin/usbmuxd /usr/bin/usbmuxd
+    fi
 fi
 
 if [ "$kind" != appimage ]; then
@@ -107,13 +132,18 @@ fi
 # open the app on a virtual screen; it saves a picture of its window and quits
 export XDG_CONFIG_HOME=/tmp/ipabazooka-config
 shot="$shots/$distro-$kind.png"
-timeout 180 xvfb-run -a -s "-screen 0 1280x1024x24" "$exe" --screenshot "$shot" --theme "$theme"
-test -s "$shot"
-bytes=$(wc -c < "$shot")
-test "$bytes" -gt 20000
-
-# the data folder holds the signing key, so it must be private
-perm=$(stat -c %a "$XDG_CONFIG_HOME/ipabazooka")
-test "$perm" = 700
-
-echo "OK: $kind on $PRETTY_NAME ($bytes-byte screenshot)"
+if command -v xvfb-run >/dev/null 2>&1; then
+    timeout 180 xvfb-run -a -s "-screen 0 1280x1024x24" "$exe" --screenshot "$shot" --theme "$theme"
+    test -s "$shot"
+    bytes=$(wc -c < "$shot")
+    test "$bytes" -gt 20000
+    # the data folder holds the signing key, so it must be private
+    perm=$(stat -c %a "$XDG_CONFIG_HOME/ipabazooka")
+    test "$perm" = 700
+    echo "OK: $kind on $PRETTY_NAME ($bytes-byte screenshot)"
+elif [ "$need_screenshot" = yes ]; then
+    echo "xvfb-run is missing" >&2
+    exit 1
+else
+    echo "OK: $kind on $PRETTY_NAME (installed and checked; no Xvfb on this system, so the window wasn't opened)"
+fi
