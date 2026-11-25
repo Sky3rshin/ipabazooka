@@ -1,4 +1,4 @@
-ipabazooka 1.3.0 — install apps on your iPhone or iPad from Windows
+ipabazooka 1.4.0 — install apps on your iPhone or iPad from Windows
 
 NEW TO SIDELOADING?
   Open the app and click "? Help" at the top, next to Theme. It explains

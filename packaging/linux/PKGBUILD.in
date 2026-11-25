@@ -1,0 +1,35 @@
+# Arch Linux package for ipabazooka, made from the portable release archive.
+# build-packages.sh fills in @VERSION@ and @SHA256@. The finished PKGBUILD is
+# published with each release, so it can also be used to build the package
+# yourself (makepkg -si) or as the base of an AUR package.
+# Maintainer: CyberWithSkyer <355110127+Sky3rshin@users.noreply.github.com>
+
+pkgname=ipabazooka
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc="Install apps (.ipa files) on your iPhone or iPad"
+arch=('x86_64')
+url="https://github.com/Sky3rshin/ipabazooka"
+license=('LicenseRef-All-Rights-Reserved' 'MIT')
+depends=('usbmuxd' 'glibc' 'gcc-libs' 'libglvnd' 'libxkbcommon' 'libxkbcommon-x11'
+         'libx11' 'libxcursor' 'libxrandr' 'libxi' 'wayland' 'hicolor-icon-theme')
+optdepends=('xdg-desktop-portal: the "choose a file" window'
+            'zenity: the "choose a file" window without a desktop portal'
+            'libimobiledevice: idevicepair, to pair a phone by hand')
+options=('!strip' '!debug')
+source=("ipabazooka-${pkgver}-linux-x86_64.tar.gz::https://github.com/Sky3rshin/ipabazooka/releases/download/v${pkgver}/ipabazooka-${pkgver}-linux-x86_64.tar.gz")
+sha256sums=('@SHA256@')
+
+package() {
+    cd "ipabazooka-${pkgver}-linux-x86_64"
+    install -Dm755 ipabazooka "$pkgdir/usr/bin/ipabazooka"
+    install -Dm644 ipabazooka.desktop "$pkgdir/usr/share/applications/ipabazooka.desktop"
+    for size in 16 32 48 64 128 256 512; do
+        install -Dm644 "icons/ipabazooka-$size.png" "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps/ipabazooka.png"
+    done
+    install -Dm644 ipabazooka-mime.xml "$pkgdir/usr/share/mime/packages/ipabazooka.xml"
+    install -Dm644 io.github.sky3rshin.ipabazooka.metainfo.xml \
+        "$pkgdir/usr/share/metainfo/io.github.sky3rshin.ipabazooka.metainfo.xml"
+    install -Dm644 README-LINUX.txt "$pkgdir/usr/share/doc/ipabazooka/README-LINUX.txt"
+    install -Dm644 COPYRIGHT.txt "$pkgdir/usr/share/licenses/ipabazooka/COPYRIGHT.txt"
+}

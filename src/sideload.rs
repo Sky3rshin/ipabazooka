@@ -341,10 +341,7 @@ pub const ANISETTE_SERVERS: &[&str] = &[
 const ANISETTE_STATE_KEY: &str = isideload::anisette::remote_v3::ANISETTE_STATE_KEY;
 
 fn data_dir() -> PathBuf {
-    std::env::var_os("APPDATA")
-        .map(PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir)
-        .join("ipabazooka")
+    crate::paths::data_dir()
 }
 
 fn server_folder(url: &str) -> String {
@@ -357,8 +354,11 @@ fn server_folder(url: &str) -> String {
     format!("anisette-{host}")
 }
 
-/// Keeps the sign-in helper data in plain files under %APPDATA%\ipabazooka,
-/// one folder per server, so it can be reset.
+/// Keeps the sign-in helper data in plain files under the data folder
+/// (%APPDATA%\ipabazooka, or ~/.config/ipabazooka on Linux), one folder per
+/// server, so it can be reset. On Linux it also holds the signing
+/// certificate's key (in "signing"), since there may be no system keyring;
+/// files there are private to the user.
 struct FileStorage {
     dir: PathBuf,
 }
@@ -377,7 +377,8 @@ impl FileStorage {
 
 impl isideload::util::storage::SideloadingStorage for FileStorage {
     fn store(&self, key: &str, value: &str) -> Result<(), rootcause::Report> {
-        std::fs::write(self.path(key), value).map_err(|e| rootcause::report!("couldn't save {key}: {e}"))?;
+        crate::paths::write_private(&self.path(key), value.as_bytes())
+            .map_err(|e| rootcause::report!("couldn't save {key}: {e}"))?;
         Ok(())
     }
     fn retrieve(&self, key: &str) -> Result<Option<String>, rootcause::Report> {
@@ -448,13 +449,36 @@ fn classify(err: &str) -> SignInProblem {
     }
 }
 
+/// The parts of the sign-in advice that depend on where sign-in data comes
+/// from: this PC's iCloud for Windows, or (on Linux) the online servers.
+#[cfg(windows)]
+const SIGNIN_DATA_TIPS: (&str, &str) = (
+    "• Apple didn't trust the sign-in data for this account (common with Advanced Data Protection). Install the web \
+     versions of iTunes and iCloud for Windows from apple.com (not the Microsoft Store ones) so ipabazooka can use this \
+     PC's own sign-in data, and keep \"Sign-in data\" on Automatic in Advanced options.",
+    "• Make sure the web versions of iTunes and iCloud for Windows (from apple.com, not the Microsoft Store) are \
+     installed, then open iCloud for Windows once and sign in to it with this same Apple ID, so Windows and Apple agree on this device.\n\
+     • Make sure the computer's clock is set to the correct time automatically.\n\
+     • Then try again. ipabazooka also falls back to its online sign-in servers on its own.",
+);
+#[cfg(not(windows))]
+const SIGNIN_DATA_TIPS: (&str, &str) = (
+    "• Apple didn't trust the sign-in data for this account (common with Advanced Data Protection). On Linux this \
+     data comes from online sign-in servers: in Advanced options press \"Reset sign-in data\" or pick another \
+     \"Online server\", then try again.",
+    "• In Advanced options, press \"Reset sign-in data\" or pick another \"Online server\" (on Linux this data \
+     comes from online sign-in servers).\n\
+     • Make sure the computer's clock is set to the correct time automatically.\n\
+     • Then try again.",
+);
+
 fn explain(err: &str) -> String {
     let l = err.to_lowercase();
-    let tip = if l.contains("-22406") {
+    let (data_22406, data_22410) = SIGNIN_DATA_TIPS;
+    let tip: String = if l.contains("-22406") {
+        format!(
         "Apple refused the password for this Apple ID (error -22406). When the password really is right, it's usually one of these:\n\
-         • Apple didn't trust the sign-in data for this account (common with Advanced Data Protection). Install the web \
-         versions of iTunes and iCloud for Windows from apple.com (not the Microsoft Store ones) so ipabazooka can use this \
-         PC's own sign-in data, and keep \"Sign-in data\" on Automatic in Advanced options.\n\
+         {data_22406}\n\
          • The email isn't one Apple accepts for signing in. At account.apple.com › Sign-In and Security › \
          Email & Phone Numbers, use the main address shown there (often an @icloud.com one). Apple also answers \
          \"wrong password\" for an email it doesn't know.\n\
@@ -465,21 +489,21 @@ fn explain(err: &str) -> String {
          or wait if the password was changed in the last day.\n\
          • A typing slip: tick \"Show password\" to check it (Caps Lock, keyboard language).\n\
          Tip: \"Check my Apple ID only\" (next to the Apple ID box) tests sign-in without a phone or app."
+        )
     } else if l.contains("-22410") || l.contains("-45061") || l.contains("-22421") {
+        format!(
         "Apple didn't accept the sign-in data (\"anisette\"), not your password (error -22410). This means the \
          identity data from this computer or server didn't match what Apple expected:\n\
-         • Make sure the web versions of iTunes and iCloud for Windows (from apple.com, not the Microsoft Store) are \
-         installed, then open iCloud for Windows once and sign in to it with this same Apple ID, so Windows and Apple agree on this device.\n\
-         • Make sure the computer's clock is set to the correct time automatically.\n\
-         • Then try again. ipabazooka also falls back to its online sign-in servers on its own."
+         {data_22410}"
+        )
     } else if l.contains("-20209") || l.contains("locked") {
-        "This Apple ID is locked for security reasons. Unlock it at iforgot.apple.com, then try again."
+        "This Apple ID is locked for security reasons. Unlock it at iforgot.apple.com, then try again.".into()
     } else if l.contains("-36607") || l.contains("-20101") {
-        "Apple can't sign this account in right now. Wait a while, then try again or pick another sign-in server."
+        "Apple can't sign this account in right now. Wait a while, then try again or pick another sign-in server.".into()
     } else if l.contains("2fa") || l.contains("two-factor") || l.contains("no 2fa code") {
-        "The two-factor code step didn't finish. Try again and enter the newest code."
+        "The two-factor code step didn't finish. Try again and enter the newest code.".into()
     } else {
-        ""
+        String::new()
     };
     let first = clean(err);
     if tip.is_empty() {
@@ -814,14 +838,20 @@ async fn run(
             if job.more_memory { "on" } else { "off" }
         ),
     );
-    let mut sideloader = SideloaderBuilder::<MaxCertsCallbackBox, ExtensionsBehaviorCallbackBox>::new(
+    let builder = SideloaderBuilder::<MaxCertsCallbackBox, ExtensionsBehaviorCallbackBox>::new(
         dev,
         job.email.clone(),
     )
     .machine_name("ipabazooka".to_string())
     .max_certs_behavior(if job.revoke_certs { MaxCertsBehavior::Revoke } else { MaxCertsBehavior::Prompt(cert_prompt) })
-    .extensions_behavior(ExtensionsBehaviorSelection::Fixed(extensions))
-    .build();
+    .extensions_behavior(ExtensionsBehaviorSelection::Fixed(extensions));
+    // Linux: keep the signing certificate's key in the app's own private folder,
+    // because many Linux setups have no system keyring to hold it. (Windows keeps
+    // using Windows Credential Manager.) Reusing the key avoids making a new
+    // certificate on every install.
+    #[cfg(not(windows))]
+    let builder = builder.storage(Box::new(FileStorage::new("signing")));
+    let mut sideloader = builder.build();
 
     let pui = ui.clone();
     let progress = move |p: f32| {

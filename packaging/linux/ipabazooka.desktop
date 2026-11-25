@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=ipabazooka
+GenericName=iOS App Installer
+Comment=Install apps (.ipa files) on your iPhone or iPad
+Exec=ipabazooka %f
+Icon=ipabazooka
+Terminal=false
+Categories=Utility;
+Keywords=iPhone;iPad;iOS;ipa;sideload;sideloading;install;Sideloadly;
+MimeType=application/x-ios-app;
+StartupWMClass=ipabazooka
+StartupNotify=true

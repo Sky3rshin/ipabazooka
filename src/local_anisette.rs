@@ -25,10 +25,7 @@ pub const USER_AGENT: &str = "akd/1.0 CFNetwork/1410.0.3 Darwin/22.6.0";
 const ROUTING_INFO: &str = "17106176";
 
 fn data_dir() -> PathBuf {
-    std::env::var_os("APPDATA")
-        .map(PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir)
-        .join("ipabazooka")
+    crate::paths::data_dir()
 }
 
 fn aoskit_path() -> PathBuf {
@@ -40,7 +37,9 @@ fn aoskit_path() -> PathBuf {
 
 /// Why "This PC" sign-in data can't be used, in plain words (None if it can).
 pub fn unavailable_reason() -> Option<String> {
-    if HELPER.is_empty() {
+    if !cfg!(windows) {
+        Some("it needs iCloud for Windows, which only exists on Windows".into())
+    } else if HELPER.is_empty() {
         Some("this copy of ipabazooka was built without the iCloud helper".into())
     } else if !aoskit_path().exists() {
         Some("the web version of iCloud for Windows isn't installed (the Microsoft Store version can't be used)".into())

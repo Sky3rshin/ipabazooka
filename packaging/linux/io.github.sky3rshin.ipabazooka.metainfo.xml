@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.sky3rshin.ipabazooka</id>
+  <name>ipabazooka</name>
+  <summary>Install apps on your iPhone or iPad</summary>
+  <developer id="io.github.sky3rshin">
+    <name>CyberWithSkyer</name>
+  </developer>
+  <metadata_license>CC0-1.0</metadata_license>
+  <description>
+    <p>
+      ipabazooka is a beginner-friendly Sideloadly alternative. It signs an app file
+      (.ipa) with your own free Apple ID and installs it on your iPhone or iPad over USB.
+      No jailbreak or paid developer account is needed.
+    </p>
+    <ul>
+      <li>Drag and drop an .ipa to see what's inside before installing</li>
+      <li>Built-in help that explains sideloading step by step</li>
+      <li>Plain-English error messages that say what to do next</li>
+      <li>Phone tools: list and remove installed apps, Developer Mode</li>
+      <li>23 themes</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">ipabazooka.desktop</launchable>
+  <url type="homepage">https://github.com/Sky3rshin/ipabazooka</url>
+  <url type="bugtracker">https://github.com/Sky3rshin/ipabazooka/issues</url>
+  <provides>
+    <binary>ipabazooka</binary>
+    <mediatype>application/x-ios-app</mediatype>
+  </provides>
+  <categories>
+    <category>Utility</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.4.0" date="2026-11-25">
+      <description>
+        <p>First Linux release: .deb, .rpm, Arch package, AppImage and a portable archive.</p>
+      </description>
+    </release>
+  </releases>
+</component>

@@ -714,11 +714,7 @@ pub fn font(size: f32) -> FontId {
 }
 
 fn saved_path() -> std::path::PathBuf {
-    std::env::var_os("APPDATA")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir)
-        .join("ipabazooka")
-        .join("theme.txt")
+    crate::paths::data_dir().join("theme.txt")
 }
 
 /// Loads the remembered theme (Hacker if none was saved).

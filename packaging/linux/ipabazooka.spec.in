@@ -1,0 +1,50 @@
+# RPM recipe for ipabazooka (Fedora, RHEL/Alma/Rocky, openSUSE).
+# build-packages.sh fills in @VERSION@ and puts the finished file tree in
+# %{_sourcedir}/root; this spec only packages it.
+%global debug_package %{nil}
+%global __os_install_post %{nil}
+
+Name:           ipabazooka
+Version:        @VERSION@
+Release:        1
+Summary:        Install apps (.ipa files) on your iPhone or iPad
+License:        LicenseRef-All-Rights-Reserved AND MIT
+URL:            https://github.com/Sky3rshin/ipabazooka
+BuildArch:      x86_64
+
+# usbmuxd lets Linux talk to an iPhone or iPad over USB
+Requires:       usbmuxd
+# graphics and keyboard libraries the window loads at run time (X11 and Wayland)
+Requires:       libGL.so.1()(64bit)
+Requires:       libEGL.so.1()(64bit)
+Requires:       libxkbcommon.so.0()(64bit)
+Requires:       libxkbcommon-x11.so.0()(64bit)
+Requires:       libX11.so.6()(64bit)
+Requires:       libXcursor.so.1()(64bit)
+Requires:       libXrandr.so.2()(64bit)
+Requires:       libXi.so.6()(64bit)
+Requires:       libwayland-client.so.0()(64bit)
+Requires:       libwayland-cursor.so.0()(64bit)
+Requires:       libwayland-egl.so.1()(64bit)
+# the "choose a file" window
+Recommends:     (xdg-desktop-portal or zenity)
+
+%description
+ipabazooka is a beginner-friendly Sideloadly alternative. It signs an app
+file (.ipa) with your own free Apple ID and installs it on an iPhone or iPad
+over USB. It explains every step, shows errors in plain English and comes
+with 23 themes.
+
+%install
+mkdir -p %{buildroot}
+cp -a %{_sourcedir}/root/. %{buildroot}/
+
+%files
+%license /usr/share/doc/ipabazooka/copyright
+%doc /usr/share/doc/ipabazooka/README-LINUX.txt
+/usr/bin/ipabazooka
+/usr/share/applications/ipabazooka.desktop
+/usr/share/icons/hicolor/*/apps/ipabazooka.png
+/usr/share/mime/packages/ipabazooka.xml
+/usr/share/metainfo/io.github.sky3rshin.ipabazooka.metainfo.xml
+%dir /usr/share/doc/ipabazooka

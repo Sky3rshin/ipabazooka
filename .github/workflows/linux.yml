@@ -1,0 +1,198 @@
+# Builds the Linux version of ipabazooka, packages it for the main
+# distributions, and tests each package by installing it on a fresh system
+# and opening the app on a virtual screen.
+#
+# Every push to main runs it. To also attach the downloads to a release,
+# run it by hand (Actions > Linux > Run workflow) and enter the release tag.
+name: Linux
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "docs/**", "shots/**"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Also upload the Linux downloads to this existing release (for example v1.4.0). Leave empty to only build and test."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build and unit-test (x86_64)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Rust toolchain
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
+          rustc -vV
+
+      - name: Zig linker (one build that runs on glibc 2.28 and newer)
+        run: |
+          python3 -m venv "$HOME/zig-env"
+          "$HOME/zig-env/bin/pip" install --quiet ziglang cargo-zigbuild
+          echo "$HOME/zig-env/bin" >> "$GITHUB_PATH"
+
+      - name: Unit tests
+        run: cargo test --locked
+
+      - name: Build release binary
+        run: cargo zigbuild --release --locked --target x86_64-unknown-linux-gnu.2.28
+
+      - name: Check the binary
+        run: |
+          b=target/x86_64-unknown-linux-gnu/release/ipabazooka
+          file "$b"
+          ls -l "$b"
+          echo "Newest glibc version it needs:"
+          objdump -T "$b" | grep -o 'GLIBC_[0-9.]*' | sort -Vu | tail -n 1
+          ldd "$b"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary
+          path: target/x86_64-unknown-linux-gnu/release/ipabazooka
+          if-no-files-found: error
+
+  package:
+    name: Make .deb, .rpm, AppImage and archive
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: binary
+          path: bin
+
+      - name: Packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm desktop-file-utils
+
+      - name: Build packages
+        run: |
+          chmod +x bin/ipabazooka
+          desktop-file-validate packaging/linux/ipabazooka.desktop
+          sh packaging/linux/build-packages.sh bin/ipabazooka out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: out/*
+          if-no-files-found: error
+
+  arch:
+    name: Make Arch Linux package
+    needs: package
+    runs-on: ubuntu-24.04
+    container: archlinux:latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages
+          path: packages
+
+      - name: makepkg
+        run: |
+          pacman -Syu --noconfirm --needed base-devel
+          useradd -m builder
+          mkdir /tmp/arch
+          cp packages/PKGBUILD packages/ipabazooka-*-linux-x86_64.tar.gz /tmp/arch/
+          chown -R builder /tmp/arch
+          cd /tmp/arch
+          sudo -u builder makepkg --nodeps --noconfirm
+          mkdir -p "$GITHUB_WORKSPACE/arch-out"
+          cp /tmp/arch/ipabazooka-*.pkg.tar.zst "$GITHUB_WORKSPACE/arch-out/"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arch-package
+          path: arch-out/*.pkg.tar.zst
+          if-no-files-found: error
+
+  test:
+    name: Test on ${{ matrix.name }}
+    needs: [package, arch]
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: "Debian 12", image: "debian:12", kind: deb }
+          - { name: "Debian 13", image: "debian:13", kind: deb }
+          - { name: "Ubuntu 22.04", image: "ubuntu:22.04", kind: deb }
+          - { name: "Ubuntu 24.04", image: "ubuntu:24.04", kind: deb }
+          - { name: "Fedora", image: "fedora:latest", kind: rpm }
+          - { name: "AlmaLinux 9 (RHEL)", image: "almalinux:9", kind: rpm }
+          - { name: "openSUSE Tumbleweed", image: "opensuse/tumbleweed:latest", kind: suse }
+          - { name: "Arch Linux", image: "archlinux:latest", kind: arch }
+          - { name: "AppImage on Ubuntu 24.04", image: "ubuntu:24.04", kind: appimage }
+          - { name: "portable archive on Fedora", image: "fedora:latest", kind: tarball }
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages
+          path: packages
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: arch-package
+          path: packages
+
+      - name: Install, check and open the app
+        run: sh packaging/linux/ci-test.sh "${{ matrix.kind }}" packages shots
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshot-${{ strategy.job-index }}-${{ matrix.kind }}
+          path: shots/*.png
+          if-no-files-found: ignore
+
+  release:
+    name: Upload to release ${{ inputs.release_tag }}
+    if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+    needs: test
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages
+          path: assets
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: arch-package
+          path: assets
+
+      - name: Upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          cd assets
+          chmod +x ./*.AppImage
+          sha256sum * > SHA256SUMS-linux.txt
+          cat SHA256SUMS-linux.txt
+          gh release upload "$TAG" ./* --clobber -R "$GITHUB_REPOSITORY"
