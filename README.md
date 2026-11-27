@@ -9,7 +9,7 @@
 ### Install apps on your iPhone or iPad from Windows or Linux. No jailbreak, no experience needed.
 
 A beginner-friendly Sideloadly alternative that explains what it's doing,<br>
-walks you through every step, and looks good doing it with 23 themes.
+walks you through every step, and looks good doing it with 25 themes.
 
 <br>
 
@@ -23,7 +23,7 @@ walks you through every step, and looks good doing it with 23 themes.
 <img src="https://img.shields.io/badge/Linux-Debian%20%7C%20Ubuntu%20%7C%20Fedora%20%7C%20openSUSE%20%7C%20Arch-FCC624?style=flat-square" alt="Linux: Debian, Ubuntu, Fedora, openSUSE, Arch and more">
 <a href="https://github.com/Sky3rshin/ipabazooka/actions/workflows/linux.yml"><img src="https://img.shields.io/github/actions/workflow/status/Sky3rshin/ipabazooka/linux.yml?branch=main&style=flat-square&label=Linux%20build" alt="Linux build status"></a>
 <img src="https://img.shields.io/badge/built%20with-Rust-B7410E?style=flat-square" alt="Built with Rust">
-<img src="https://img.shields.io/badge/themes-23-ff69b4?style=flat-square" alt="23 themes">
+<img src="https://img.shields.io/badge/themes-25-ff69b4?style=flat-square" alt="25 themes">
 
 <br>
 
@@ -112,7 +112,7 @@ A single exe on Windows, and on Linux a `.deb`, `.rpm`, Arch package, AppImage o
 </td>
 <td valign="top">
 
-**23 themes**<br>
+**25 themes**<br>
 From a plain light theme to Hacker-style digital rain, Synthwave, Catppuccin, Dracula, Nord and more, many with animated backgrounds.
 
 </td>
@@ -500,6 +500,11 @@ Pick a theme from the **Theme** menu in the top-right corner. Your choice is rem
 <tr>
 <td align="center"><img src="docs/screenshots/themes/lava.png" alt="Lava theme"><br><sub><b>Lava</b></sub></td>
 <td align="center"><img src="docs/screenshots/themes/aurora.png" alt="Aurora theme"><br><sub><b>Aurora</b></sub></td>
+<td align="center"><img src="docs/screenshots/themes/gold-black.png" alt="Gold & Black theme"><br><sub><b>Gold &amp; Black</b></sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/screenshots/themes/gold-white.png" alt="Gold & White theme"><br><sub><b>Gold &amp; White</b></sub></td>
+<td></td>
 <td></td>
 </tr>
 </table>

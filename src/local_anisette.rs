@@ -180,6 +180,26 @@ impl AnisetteProvider for LocalAnisetteProvider {
 
 #[cfg(test)]
 mod tests {
+    /// Network check (run by hand): the sign-in's first step, Apple's URL bag,
+    /// exactly as a sign-in with this PC's data makes it (same headers).
+    ///     cargo test --bins first_signin_step -- --ignored --nocapture
+    #[tokio::test]
+    #[ignore]
+    async fn first_signin_step_reaches_apple() {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        let info = isideload::anisette::AnisetteClientInfo {
+            client_info: super::CLIENT_INFO.to_string(),
+            user_agent: super::USER_AGENT.to_string(),
+        };
+        for attempt in 1..=3 {
+            let t = std::time::Instant::now();
+            match isideload::auth::grandslam::GrandSlam::new(info.clone(), false, None).await {
+                Ok(_) => println!("try {attempt}: URL bag OK in {:?}", t.elapsed()),
+                Err(e) => println!("try {attempt}: failed after {:?}:\n{e}", t.elapsed()),
+            }
+        }
+    }
+
     /// Runs the real helper when iCloud for Windows (web) is installed here;
     /// on machines without it, checks that the reason is reported instead.
     #[test]
