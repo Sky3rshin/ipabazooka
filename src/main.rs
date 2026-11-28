@@ -3,6 +3,7 @@
 mod device;
 mod ipa;
 mod local_anisette;
+mod paths;
 mod sideload;
 mod phone;
 mod progress;
@@ -131,7 +132,8 @@ impl LoaderApp {
             revoke_certs: false,
             anisette_choice: 0,
             anisette_custom: String::new(),
-            local_mode: sideload::LocalAnisette::Auto,
+            // "This PC" sign-in data needs iCloud for Windows, so Linux uses the online servers
+            local_mode: if cfg!(windows) { sideload::LocalAnisette::Auto } else { sideload::LocalAnisette::Off },
             show_password: false,
             checking: false,
             share_extension_ids: false,
@@ -169,12 +171,16 @@ impl LoaderApp {
             shot_sent_frame: 0,
         };
         app.push(Kind::Info, "Ready. Drop an .ipa file on the box or click it to choose one.");
-        match local_anisette::unavailable_reason() {
-            None => app.push(Kind::Good, "Sign-in data: this PC's iCloud for Windows is ready (used first)."),
-            Some(why) => app.push(
-                Kind::Warn,
-                format!("Sign-in data: this PC's iCloud can't be used — {why}. Online servers will be used instead."),
-            ),
+        if cfg!(windows) {
+            match local_anisette::unavailable_reason() {
+                None => app.push(Kind::Good, "Sign-in data: this PC's iCloud for Windows is ready (used first)."),
+                Some(why) => app.push(
+                    Kind::Warn,
+                    format!("Sign-in data: this PC's iCloud can't be used — {why}. Online servers will be used instead."),
+                ),
+            }
+        } else {
+            app.push(Kind::Info, "Sign-in data: online sign-in servers (iCloud for Windows only exists on Windows).");
         }
         app
     }
@@ -322,7 +328,7 @@ impl LoaderApp {
                 }
                 self.service_ok = Some(false);
                 self.devices.clear();
-                self.device_note = "Apple device service not found".into();
+                self.device_note = if cfg!(windows) { "Apple device service not found" } else { "usbmuxd not found" }.into();
             }
         }
     }
@@ -1163,33 +1169,36 @@ impl LoaderApp {
                     )
                     .on_hover_text("Free Apple IDs allow only a few signing certificates. Revoking one can stop apps signed with it.");
                     ui.add_space(4.0);
-                    ui.horizontal(|ui| {
-                        use sideload::LocalAnisette as L;
-                        ui.label("Sign-in data");
-                        let name = |m: L| match m {
-                            L::Auto => "Automatic (this PC first, then online)",
-                            L::Only => "This PC only (iTunes/iCloud)",
-                            L::Off => "Online servers only",
+                    // "This PC" sign-in data comes from iCloud for Windows, so the choice only exists there
+                    if cfg!(windows) {
+                        ui.horizontal(|ui| {
+                            use sideload::LocalAnisette as L;
+                            ui.label("Sign-in data");
+                            let name = |m: L| match m {
+                                L::Auto => "Automatic (this PC first, then online)",
+                                L::Only => "This PC only (iTunes/iCloud)",
+                                L::Off => "Online servers only",
+                            };
+                            egui::ComboBox::from_id_salt("local_mode")
+                                .width(260.0)
+                                .selected_text(name(self.local_mode))
+                                .show_ui(ui, |ui| {
+                                    for m in [L::Auto, L::Only, L::Off] {
+                                        ui.selectable_value(&mut self.local_mode, m, name(m));
+                                    }
+                                })
+                                .response
+                                .on_hover_text(
+                                    "Apple needs \"anisette\" sign-in data. \"This PC\" makes it with Apple's own iCloud for Windows \
+                                     (web version) on this computer — the most trusted kind. Online servers are the backup.",
+                                );
+                        });
+                        let local_note = match local_anisette::unavailable_reason() {
+                            None => ("This PC's iCloud sign-in data: ready".to_string(), th().good),
+                            Some(why) => (format!("This PC's iCloud sign-in data: not available — {why}"), th().warn),
                         };
-                        egui::ComboBox::from_id_salt("local_mode")
-                            .width(260.0)
-                            .selected_text(name(self.local_mode))
-                            .show_ui(ui, |ui| {
-                                for m in [L::Auto, L::Only, L::Off] {
-                                    ui.selectable_value(&mut self.local_mode, m, name(m));
-                                }
-                            })
-                            .response
-                            .on_hover_text(
-                                "Apple needs \"anisette\" sign-in data. \"This PC\" makes it with Apple's own iCloud for Windows \
-                                 (web version) on this computer — the most trusted kind. Online servers are the backup.",
-                            );
-                    });
-                    let local_note = match local_anisette::unavailable_reason() {
-                        None => ("This PC's iCloud sign-in data: ready".to_string(), th().good),
-                        Some(why) => (format!("This PC's iCloud sign-in data: not available — {why}"), th().warn),
-                    };
-                    ui.label(RichText::new(local_note.0).size(11.0).color(local_note.1));
+                        ui.label(RichText::new(local_note.0).size(11.0).color(local_note.1));
+                    }
                     ui.horizontal(|ui| {
                         ui.label("Online server");
                         let list = sideload::ANISETTE_SERVERS;
@@ -1232,10 +1241,7 @@ impl LoaderApp {
                         .clicked()
                     {
                         let path = log_file_path();
-                        #[cfg(windows)]
-                        let opened = std::process::Command::new("notepad.exe").arg(&path).spawn().is_ok();
-                        #[cfg(not(windows))]
-                        let opened = false;
+                        let opened = paths::open_text_file(&path);
                         if !opened {
                             self.push(Kind::Info, format!("Saved log: {}", path.display()));
                         }
@@ -1315,9 +1321,24 @@ impl LoaderApp {
                 help_part(ui, "help_use", "Using this app, step by step", false, |ui| {
                     help_text(
                         ui,
-                        "Once per computer: install iTunes and iCloud for Windows from apple.com (the web \
-                         versions, not the Microsoft Store ones).",
+                        if cfg!(windows) {
+                            "Once per computer: install iTunes and iCloud for Windows from apple.com (the web \
+                             versions, not the Microsoft Store ones)."
+                        } else {
+                            "Once per computer: make sure usbmuxd is installed. The .deb, .rpm and Arch packages \
+                             install it for you; otherwise use your package manager (for example: sudo apt install usbmuxd)."
+                        },
                     );
+                    if cfg!(windows) {
+                        ui.horizontal_wrapped(|ui| {
+                            ui.spacing_mut().item_spacing.x = 4.0;
+                            ui.label(RichText::new("You need both. Click to download:").color(th().text).size(13.0));
+                            web_link(ui, "web iTunes", WEB_ITUNES_URL, "iTunes for Windows (64-bit)", 13.0);
+                            ui.label(RichText::new("and").color(th().text).size(13.0));
+                            web_link(ui, "web iCloud", WEB_ICLOUD_URL, "iCloud for Windows", 13.0);
+                        });
+                        ui.add_space(3.0);
+                    }
                     help_steps(
                         ui,
                         &[
@@ -1342,8 +1363,14 @@ impl LoaderApp {
                     help_points(
                         ui,
                         &[
-                            "No phone under \"Device\": unplug and plug the cable back in, unlock the phone, tap \
-                             Trust, and make sure iTunes from apple.com is installed.",
+                            if cfg!(windows) {
+                                "No phone under \"Device\": unplug and plug the cable back in, unlock the phone, tap \
+                                 Trust, and make sure iTunes from apple.com is installed."
+                            } else {
+                                "No phone under \"Device\": unplug and plug the cable back in, unlock the phone, tap \
+                                 Trust, and make sure usbmuxd is installed. If \"Trust\" never appears, run \
+                                 idevicepair pair (from libimobiledevice) in a terminal."
+                            },
                             "Apple says the password is wrong but it's right: open Advanced options, press \"Reset \
                              sign-in data\", then try again.",
                             "The app won't open on the phone: trust your Apple ID and turn on Developer Mode \
@@ -1631,7 +1658,10 @@ impl eframe::App for LoaderApp {
                         let (txt, col) = match self.service_ok {
                             Some(true) if !self.devices.is_empty() => (lbl("[ LINK ESTABLISHED ]", "Device connected"), th().good),
                             Some(true) => (lbl("[ AWAITING TARGET ]", "Waiting for device"), th().warn),
-                            Some(false) => (lbl("[ NO USB SERVICE ]", "Apple device service missing"), th().bad),
+                            Some(false) => (
+                                lbl("[ NO USB SERVICE ]", if cfg!(windows) { "Apple device service missing" } else { "usbmuxd missing" }),
+                                th().bad,
+                            ),
                             None => (lbl("[ SCANNING ]", "Looking for devices"), th().muted),
                         };
                         // only when it fits beside the title (the device box says it too)
@@ -1720,6 +1750,8 @@ impl eframe::App for LoaderApp {
                     .max_height(top_max)
                     .auto_shrink([false, true])
                     .show(ui, |ui| {
+                        warning_banner(ui);
+                        ui.add_space(10.0);
                         ui.horizontal_top(|ui| {
                             self.drop_tile(ui, hovering_files);
                             ui.add_space(14.0);
@@ -1764,14 +1796,29 @@ impl eframe::App for LoaderApp {
                 self.last_fit_h = 0.0;
             }
         }
-        if !help_open && !self.show_history && !is_full && !maxed && content_h > 0.0 {
+        if !help_open && !is_full && !maxed && content_h > 0.0 {
             if let Some(inner) = inner {
                 let cap = monitor.map(|m| m.y - 60.0).unwrap_or(1000.0).max(MIN_WINDOW_H);
-                let want = (header_h + footer_h + content_h + 34.0).clamp(MIN_WINDOW_H, cap).round();
-                if (want - self.last_fit_h).abs() > 1.0 {
-                    self.last_fit_h = want;
-                    if (want - inner.y).abs() > 1.0 {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::new(inner.x, want)));
+                let natural = header_h + footer_h + content_h + 34.0;
+                if !self.show_history {
+                    // history hidden: the height follows the content
+                    let want = natural.clamp(MIN_WINDOW_H, cap).round();
+                    if (want - self.last_fit_h).abs() > 1.0 {
+                        self.last_fit_h = want;
+                        if (want - inner.y).abs() > 1.0 {
+                            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::new(inner.x, want)));
+                        }
+                    }
+                } else {
+                    // history shown: make sure everything above it (including
+                    // Start) fits with room for the log, growing only, so a
+                    // window made taller by hand stays as it is
+                    let want = (natural + HISTORY_MIN_LOG).clamp(MIN_WINDOW_H, cap).round();
+                    if (want - self.last_fit_h).abs() > 1.0 {
+                        self.last_fit_h = want;
+                        if want > inner.y + 1.0 {
+                            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::new(inner.x, want)));
+                        }
                     }
                 }
             }
@@ -1832,18 +1879,18 @@ const WINDOW_W: f32 = ORIGINAL_LAYOUT_W * 8.0 / 10.0;
 const MIN_WINDOW_H: f32 = 300.0;
 /// Extra height given to the status history when it is shown.
 const HISTORY_ROOM: f32 = 260.0;
+/// The least room kept for the history (its title row and box) under the
+/// rest of the page; the page above scrolls only if the screen is too small.
+const HISTORY_MIN_LOG: f32 = 236.0;
 /// The window is at least this tall while the Help drop-down is open.
 const HELP_ROOM_H: f32 = 620.0;
 /// Saved options are read up to this many bytes, like the original.
 const OPTION_MAX_BYTES: usize = 512;
 
-/// Each saved option is its own small file: %APPDATA%\ipabazooka\option-<name>
+/// Each saved option is its own small file: <data folder>/option-<name>
+/// (%APPDATA%\ipabazooka on Windows, ~/.config/ipabazooka on Linux)
 fn option_path(name: &str) -> PathBuf {
-    std::env::var_os("APPDATA")
-        .map(PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir)
-        .join("ipabazooka")
-        .join(format!("option-{name}"))
+    paths::data_dir().join(format!("option-{name}"))
 }
 
 /// None when the option was never saved.
@@ -1863,13 +1910,9 @@ fn option_save(name: &str, value: &str) {
     let _ = std::fs::write(path, value);
 }
 
-/// Where the saved log goes: %APPDATA%\ipabazooka\ipabazooka.log
+/// Where the saved log goes: <data folder>/ipabazooka.log
 fn log_file_path() -> PathBuf {
-    std::env::var_os("APPDATA")
-        .map(PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir)
-        .join("ipabazooka")
-        .join("ipabazooka.log")
+    paths::data_dir().join("ipabazooka.log")
 }
 
 /// Appends one log line (with UTC time) to the saved log. Passwords are
@@ -1891,6 +1934,11 @@ fn write_log_file(kind: Kind, text: &str) {
 /// ipabazooka.old.log and a new one starts. Passwords are never logged.
 pub(crate) fn write_log_line(tag: &str, text: &str) {
     use std::io::Write;
+    // Tests exercise the error paths with sample errors; they must never end
+    // up in the person's real log (they once looked like real failed installs).
+    if cfg!(test) {
+        return;
+    }
     static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
     let _guard = LOCK.lock();
     let path = log_file_path();
@@ -1933,17 +1981,9 @@ pub(crate) fn write_log_line(tag: &str, text: &str) {
     }
 }
 
-/// Opens the saved log in Notepad (Windows) or says where it is.
+/// Opens the saved log in Notepad (Windows) or the default text viewer (Linux).
 fn open_log_file() {
-    let path = log_file_path();
-    #[cfg(windows)]
-    {
-        let _ = std::process::Command::new("notepad.exe").arg(&path).spawn();
-    }
-    #[cfg(not(windows))]
-    {
-        let _ = path;
-    }
+    let _ = paths::open_text_file(&log_file_path());
 }
 
 
@@ -1958,6 +1998,88 @@ fn card(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
             add(ui)
         });
     ui.add_space(6.0);
+}
+
+/// Apple's download of the web (non-Microsoft-Store) iTunes for 64-bit Windows.
+const WEB_ITUNES_URL: &str = "https://www.apple.com/itunes/download/win64";
+/// Apple's download of the web (non-Microsoft-Store) iCloud for Windows.
+const WEB_ICLOUD_URL: &str =
+    "https://updates.cdn-apple.com/2020/windows/001-39935-20200911-1A70AA56-F448-11EA-8CC0-99D41950005E/iCloudSetup.exe";
+
+/// An underlined link whose own words open the address (e.g. "web iTunes").
+fn web_link(ui: &mut egui::Ui, words: &str, url: &str, what: &str, size: f32) {
+    ui.add(egui::Hyperlink::from_label_and_url(
+        RichText::new(words).color(th().accent).strong().underline().size(size),
+        url,
+    ))
+    .on_hover_text(format!("Downloads {what} from Apple:\n{url}"));
+}
+
+/// A small, always-visible warning at the top of the main area, so nobody is
+/// surprised when sideloading doesn't work: both web iTunes and web iCloud are
+/// needed first (each word pair links to Apple's download), and it doesn't work
+/// with every Apple ID or app.
+fn warning_banner(ui: &mut egui::Ui) {
+    let warn = th().warn;
+    // solid (not see-through), so moving theme backgrounds don't show behind the text
+    let mix = |a: u8, b: u8| (a as f32 + (b as f32 - a as f32) * 0.16).round() as u8;
+    let card = th().card;
+    let fill = Color32::from_rgb(mix(card.r(), warn.r()), mix(card.g(), warn.g()), mix(card.b(), warn.b()));
+    egui::Frame::default()
+        .fill(fill)
+        .stroke(Stroke::new(1.5_f32, warn))
+        .corner_radius(CornerRadius::same(8))
+        .inner_margin(egui::Margin::symmetric(10, 6))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.horizontal_top(|ui| {
+                ui.label(RichText::new("⚠").color(warn).strong().size(18.0));
+                ui.vertical(|ui| {
+                    ui.spacing_mut().item_spacing.y = 2.0;
+                    if !cfg!(windows) {
+                        // Linux has no iTunes/iCloud: the phone connection comes from usbmuxd
+                        ui.horizontal_wrapped(|ui| {
+                            ui.spacing_mut().item_spacing.x = 4.0;
+                            ui.label(RichText::new("Before you start:").color(warn).strong().size(12.5));
+                            ui.label(
+                                RichText::new("make sure usbmuxd is installed, or your iPhone won't show up.")
+                                    .color(th().text)
+                                    .size(12.5),
+                            );
+                        });
+                        ui.label(
+                            RichText::new("Not every Apple ID or app works, and free Apple IDs need a reinstall every 7 days.")
+                                .color(th().muted)
+                                .size(11.5),
+                        );
+                        return;
+                    }
+                    ui.horizontal_wrapped(|ui| {
+                        ui.spacing_mut().item_spacing.x = 4.0;
+                        ui.label(RichText::new("Before you start:").color(warn).strong().size(12.5));
+                        ui.label(RichText::new("you need both").color(th().text).size(12.5));
+                        web_link(ui, "web iTunes", WEB_ITUNES_URL, "iTunes for Windows (64-bit)", 12.5);
+                        ui.label(RichText::new("and").color(th().text).size(12.5));
+                        web_link(ui, "web iCloud", WEB_ICLOUD_URL, "iCloud for Windows", 12.5);
+                        ui.label(
+                            RichText::new(
+                                "installed (not the Microsoft Store versions), or your iPhone won't show up and sign-in can fail.",
+                            )
+                            .color(th().text)
+                            .size(12.5),
+                        );
+                    });
+                    ui.label(
+                        RichText::new(
+                            "iTunes lets the app see your iPhone; iCloud makes Apple ID sign-in work. Not every Apple ID \
+                             or app works, and free Apple IDs need a reinstall every 7 days.",
+                        )
+                        .color(th().muted)
+                        .size(11.5),
+                    );
+                });
+            });
+        });
 }
 
 /// One drop-down part of the "New here?" guide.
@@ -2038,6 +2160,9 @@ fn make_icon() -> egui::IconData {
 
 fn main() -> eframe::Result<()> {
     let _ = rustls::crypto::ring::default_provider().install_default();
+    // Linux: make the data folder private up front (it holds the signing key)
+    #[cfg(unix)]
+    paths::ensure_data_dir();
     let _ = isideload::init();
     sideload::init_logging();
     let args: Vec<String> = std::env::args().collect();
@@ -2061,6 +2186,8 @@ fn main() -> eframe::Result<()> {
 
     let mut viewport = egui::ViewportBuilder::default()
         .with_title("ipabazooka")
+        // Linux desktops match the window to ipabazooka.desktop (and its icon) by this id
+        .with_app_id("ipabazooka")
         .with_inner_size([WINDOW_W, 520.0])
         .with_min_inner_size([520.0, MIN_WINDOW_H])
         .with_drag_and_drop(true)

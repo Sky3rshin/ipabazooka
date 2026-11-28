@@ -25,10 +25,7 @@ pub const USER_AGENT: &str = "akd/1.0 CFNetwork/1410.0.3 Darwin/22.6.0";
 const ROUTING_INFO: &str = "17106176";
 
 fn data_dir() -> PathBuf {
-    std::env::var_os("APPDATA")
-        .map(PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir)
-        .join("ipabazooka")
+    crate::paths::data_dir()
 }
 
 fn aoskit_path() -> PathBuf {
@@ -40,7 +37,9 @@ fn aoskit_path() -> PathBuf {
 
 /// Why "This PC" sign-in data can't be used, in plain words (None if it can).
 pub fn unavailable_reason() -> Option<String> {
-    if HELPER.is_empty() {
+    if !cfg!(windows) {
+        Some("it needs iCloud for Windows, which only exists on Windows".into())
+    } else if HELPER.is_empty() {
         Some("this copy of ipabazooka was built without the iCloud helper".into())
     } else if !aoskit_path().exists() {
         Some("the web version of iCloud for Windows isn't installed (the Microsoft Store version can't be used)".into())
@@ -181,6 +180,26 @@ impl AnisetteProvider for LocalAnisetteProvider {
 
 #[cfg(test)]
 mod tests {
+    /// Network check (run by hand): the sign-in's first step, Apple's URL bag,
+    /// exactly as a sign-in with this PC's data makes it (same headers).
+    ///     cargo test --bins first_signin_step -- --ignored --nocapture
+    #[tokio::test]
+    #[ignore]
+    async fn first_signin_step_reaches_apple() {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        let info = isideload::anisette::AnisetteClientInfo {
+            client_info: super::CLIENT_INFO.to_string(),
+            user_agent: super::USER_AGENT.to_string(),
+        };
+        for attempt in 1..=3 {
+            let t = std::time::Instant::now();
+            match isideload::auth::grandslam::GrandSlam::new(info.clone(), false, None).await {
+                Ok(_) => println!("try {attempt}: URL bag OK in {:?}", t.elapsed()),
+                Err(e) => println!("try {attempt}: failed after {:?}:\n{e}", t.elapsed()),
+            }
+        }
+    }
+
     /// Runs the real helper when iCloud for Windows (web) is installed here;
     /// on machines without it, checks that the reason is reported instead.
     #[test]

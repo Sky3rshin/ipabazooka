@@ -114,7 +114,7 @@ async fn reveal(udid: &str) -> Result<String, String> {
     amfi.reveal_developer_mode_option_in_ui()
         .await
         .map_err(|e| format!("Couldn't show the Developer Mode switch: {e}"))?;
-    Ok("Done. On the phone: Settings › Privacy & Security › Developer Mode → On, then restart it.".into())
+    Ok("Done. On the phone: Settings › Privacy & Security › Developer Mode › On, then restart it.".into())
 }
 
 /// Runs one phone job in the background and reports back through `tx`.

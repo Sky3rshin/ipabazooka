@@ -229,7 +229,9 @@ pub fn init_logging() {
     // verbose step-by-step detail: saved log only
     let debug_filter = Targets::new()
         .with_target("isideload", tracing::Level::DEBUG)
-        .with_target("idevice", tracing::Level::DEBUG);
+        // the phone library's DEBUG output (every USB message) filled the 2 MB
+        // log in seconds and pushed out the sign-in history; keep its INFO
+        .with_target("idevice", tracing::Level::INFO);
     let debug_layer = tracing_subscriber::fmt::layer()
         .with_writer(|| FileDebugWriter)
         .with_ansi(false)
@@ -241,7 +243,8 @@ pub fn init_logging() {
 }
 
 /// Turns a library error report (with tree drawing and source-file lines)
-/// into plain text: "Failed to log in → Auth error -22406: …".
+/// into plain text: "Failed to log in › Auth error -22406: …". (› rather
+/// than an arrow: the window's text font has no arrow and drew a box.)
 pub fn clean(e: impl std::fmt::Display) -> String {
     let s = e.to_string();
     let parts: Vec<String> = s
@@ -256,14 +259,25 @@ pub fn clean(e: impl std::fmt::Display) -> String {
             out.push(p);
         }
     }
-    if out.is_empty() { s.trim().to_string() } else { out.join(" → ") }
+    if out.is_empty() { s.trim().to_string() } else { out.join(" › ") }
 }
+
+/// What to do when Apple's servers can't be reached.
+const NETWORK_TIP: &str = "ipabazooka couldn't reach Apple's servers, so your Apple ID wasn't checked at all. \
+     This is an internet connection problem, not your Apple ID or password (it tried a few times).\n\
+     • Check that the internet works on this PC: open apple.com in a web browser.\n\
+     • Turn off any VPN or proxy, then try again.\n\
+     • School, work and public Wi-Fi sometimes block Apple sign-in: try another network or a phone hotspot.\n\
+     • Let ipabazooka through your firewall or antivirus (its web shield or HTTPS scanning).\n\
+     • Wait a minute, then press Start again.";
 
 /// Plain-language advice for errors from Apple's developer service or the phone.
 pub fn advice(err: &str) -> Option<&'static str> {
     let l = err.to_lowercase();
     let has = |k: &str| l.contains(&k.to_lowercase());
-    Some(if has("7460") || has("maximum number of certificates") {
+    Some(if is_network_problem(err) {
+        NETWORK_TIP
+    } else if has("7460") || has("maximum number of certificates") {
         "Your Apple ID already has the most signing certificates Apple allows (usually made by Sideloadly, AltStore or another computer). \
          When asked, pick an old one to revoke — or tick \"revoke an old certificate\" in Advanced options. \
          Apps signed with a revoked certificate stop opening until you reinstall them."
@@ -341,10 +355,7 @@ pub const ANISETTE_SERVERS: &[&str] = &[
 const ANISETTE_STATE_KEY: &str = isideload::anisette::remote_v3::ANISETTE_STATE_KEY;
 
 fn data_dir() -> PathBuf {
-    std::env::var_os("APPDATA")
-        .map(PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir)
-        .join("ipabazooka")
+    crate::paths::data_dir()
 }
 
 fn server_folder(url: &str) -> String {
@@ -357,8 +368,11 @@ fn server_folder(url: &str) -> String {
     format!("anisette-{host}")
 }
 
-/// Keeps the sign-in helper data in plain files under %APPDATA%\ipabazooka,
-/// one folder per server, so it can be reset.
+/// Keeps the sign-in helper data in plain files under the data folder
+/// (%APPDATA%\ipabazooka, or ~/.config/ipabazooka on Linux), one folder per
+/// server, so it can be reset. On Linux it also holds the signing
+/// certificate's key (in "signing"), since there may be no system keyring;
+/// files there are private to the user.
 struct FileStorage {
     dir: PathBuf,
 }
@@ -377,7 +391,8 @@ impl FileStorage {
 
 impl isideload::util::storage::SideloadingStorage for FileStorage {
     fn store(&self, key: &str, value: &str) -> Result<(), rootcause::Report> {
-        std::fs::write(self.path(key), value).map_err(|e| rootcause::report!("couldn't save {key}: {e}"))?;
+        crate::paths::write_private(&self.path(key), value.as_bytes())
+            .map_err(|e| rootcause::report!("couldn't save {key}: {e}"))?;
         Ok(())
     }
     fn retrieve(&self, key: &str) -> Result<Option<String>, rootcause::Report> {
@@ -420,8 +435,31 @@ enum SignInProblem {
     Rejected,
     /// The sign-in helper server didn't work
     Server,
+    /// Apple's own servers couldn't be reached (internet, VPN, firewall…):
+    /// the Apple ID wasn't checked at all, so try the same thing again
+    Network,
     /// Anything else: don't retry
     Other,
+}
+
+/// How many times in a row sign-in tries when Apple's servers can't be reached.
+const NETWORK_TRIES: u32 = 3;
+
+/// A request to Apple (not to a sign-in helper server) never got an answer.
+fn is_network_problem(err: &str) -> bool {
+    let l = err.to_lowercase();
+    let reached_apple = l.contains("apple.com") || l.contains("url bag");
+    let no_answer = l.contains("error sending request")
+        || l.contains("failed to fetch url bag")
+        || l.contains("tcp connect")
+        || l.contains("timed out")
+        || l.contains("dns error")
+        || l.contains("connection reset")
+        || l.contains("connection refused")
+        || l.contains("connection closed")
+        || l.contains("network is unreachable")
+        || l.contains("no such host");
+    reached_apple && no_answer
 }
 
 fn classify(err: &str) -> SignInProblem {
@@ -429,6 +467,8 @@ fn classify(err: &str) -> SignInProblem {
     if l.contains("-22406") {
         // Apple: wrong Apple ID or password
         SignInProblem::Rejected
+    } else if is_network_problem(err) {
+        SignInProblem::Network
     } else if l.contains("anisette")
         || l.contains("provision")
         || l.contains("client_info")
@@ -448,13 +488,38 @@ fn classify(err: &str) -> SignInProblem {
     }
 }
 
+/// The parts of the sign-in advice that depend on where sign-in data comes
+/// from: this PC's iCloud for Windows, or (on Linux) the online servers.
+#[cfg(windows)]
+const SIGNIN_DATA_TIPS: (&str, &str) = (
+    "• Apple didn't trust the sign-in data for this account (common with Advanced Data Protection). Install the web \
+     versions of iTunes and iCloud for Windows from apple.com (not the Microsoft Store ones) so ipabazooka can use this \
+     PC's own sign-in data, and keep \"Sign-in data\" on Automatic in Advanced options.",
+    "• Make sure the web versions of iTunes and iCloud for Windows (from apple.com, not the Microsoft Store) are \
+     installed, then open iCloud for Windows once and sign in to it with this same Apple ID, so Windows and Apple agree on this device.\n\
+     • Make sure the computer's clock is set to the correct time automatically.\n\
+     • Then try again. ipabazooka also falls back to its online sign-in servers on its own.",
+);
+#[cfg(not(windows))]
+const SIGNIN_DATA_TIPS: (&str, &str) = (
+    "• Apple didn't trust the sign-in data for this account (common with Advanced Data Protection). On Linux this \
+     data comes from online sign-in servers: in Advanced options press \"Reset sign-in data\" or pick another \
+     \"Online server\", then try again.",
+    "• In Advanced options, press \"Reset sign-in data\" or pick another \"Online server\" (on Linux this data \
+     comes from online sign-in servers).\n\
+     • Make sure the computer's clock is set to the correct time automatically.\n\
+     • Then try again.",
+);
+
 fn explain(err: &str) -> String {
     let l = err.to_lowercase();
-    let tip = if l.contains("-22406") {
+    let (data_22406, data_22410) = SIGNIN_DATA_TIPS;
+    let tip: String = if is_network_problem(err) {
+        NETWORK_TIP.to_string()
+    } else if l.contains("-22406") {
+        format!(
         "Apple refused the password for this Apple ID (error -22406). When the password really is right, it's usually one of these:\n\
-         • Apple didn't trust the sign-in data for this account (common with Advanced Data Protection). Install the web \
-         versions of iTunes and iCloud for Windows from apple.com (not the Microsoft Store ones) so ipabazooka can use this \
-         PC's own sign-in data, and keep \"Sign-in data\" on Automatic in Advanced options.\n\
+         {data_22406}\n\
          • The email isn't one Apple accepts for signing in. At account.apple.com › Sign-In and Security › \
          Email & Phone Numbers, use the main address shown there (often an @icloud.com one). Apple also answers \
          \"wrong password\" for an email it doesn't know.\n\
@@ -465,21 +530,21 @@ fn explain(err: &str) -> String {
          or wait if the password was changed in the last day.\n\
          • A typing slip: tick \"Show password\" to check it (Caps Lock, keyboard language).\n\
          Tip: \"Check my Apple ID only\" (next to the Apple ID box) tests sign-in without a phone or app."
+        )
     } else if l.contains("-22410") || l.contains("-45061") || l.contains("-22421") {
+        format!(
         "Apple didn't accept the sign-in data (\"anisette\"), not your password (error -22410). This means the \
          identity data from this computer or server didn't match what Apple expected:\n\
-         • Make sure the web versions of iTunes and iCloud for Windows (from apple.com, not the Microsoft Store) are \
-         installed, then open iCloud for Windows once and sign in to it with this same Apple ID, so Windows and Apple agree on this device.\n\
-         • Make sure the computer's clock is set to the correct time automatically.\n\
-         • Then try again. ipabazooka also falls back to its online sign-in servers on its own."
+         {data_22410}"
+        )
     } else if l.contains("-20209") || l.contains("locked") {
-        "This Apple ID is locked for security reasons. Unlock it at iforgot.apple.com, then try again."
+        "This Apple ID is locked for security reasons. Unlock it at iforgot.apple.com, then try again.".into()
     } else if l.contains("-36607") || l.contains("-20101") {
-        "Apple can't sign this account in right now. Wait a while, then try again or pick another sign-in server."
+        "Apple can't sign this account in right now. Wait a while, then try again or pick another sign-in server.".into()
     } else if l.contains("2fa") || l.contains("two-factor") || l.contains("no 2fa code") {
-        "The two-factor code step didn't finish. Try again and enter the newest code."
+        "The two-factor code step didn't finish. Try again and enter the newest code.".into()
     } else {
-        ""
+        String::new()
     };
     let first = clean(err);
     if tip.is_empty() {
@@ -609,6 +674,7 @@ where
     }
 
     let mut rejected = 0;
+    let mut unreachable = 0u32;
     let mut last_err = String::new();
     let mut src = 0;
     let mut name = 0;
@@ -678,6 +744,24 @@ where
                         src += 1;
                         name = 0;
                         reset_done = false;
+                    }
+                    SignInProblem::Network => {
+                        // Apple never answered, so nothing counted against the
+                        // Apple ID: wait a moment and try the same again.
+                        unreachable += 1;
+                        if unreachable >= NETWORK_TRIES {
+                            break;
+                        }
+                        let wait = 3 * unreachable as u64;
+                        ui.log(
+                            Kind::Warn,
+                            format!(
+                                "Couldn't reach Apple's sign-in server (a connection problem, not your Apple ID). \
+                                 Trying again in {wait} seconds ({} of {NETWORK_TRIES})…",
+                                unreachable + 1
+                            ),
+                        );
+                        tokio::time::sleep(std::time::Duration::from_secs(wait)).await;
                     }
                     SignInProblem::Other => break,
                 }
@@ -808,20 +892,26 @@ async fn run(
     ui.log(
         Kind::Info,
         format!(
-            "Settings: extensions {}, certificate limit → {}, more memory {}.",
+            "Settings: extensions {}, certificate limit: {}, more memory {}.",
             if job.share_extension_ids { "share the main App ID" } else { "get their own App IDs" },
             if job.revoke_certs { "revoke automatically" } else { "ask me" },
             if job.more_memory { "on" } else { "off" }
         ),
     );
-    let mut sideloader = SideloaderBuilder::<MaxCertsCallbackBox, ExtensionsBehaviorCallbackBox>::new(
+    let builder = SideloaderBuilder::<MaxCertsCallbackBox, ExtensionsBehaviorCallbackBox>::new(
         dev,
         job.email.clone(),
     )
     .machine_name("ipabazooka".to_string())
     .max_certs_behavior(if job.revoke_certs { MaxCertsBehavior::Revoke } else { MaxCertsBehavior::Prompt(cert_prompt) })
-    .extensions_behavior(ExtensionsBehaviorSelection::Fixed(extensions))
-    .build();
+    .extensions_behavior(ExtensionsBehaviorSelection::Fixed(extensions));
+    // Linux: keep the signing certificate's key in the app's own private folder,
+    // because many Linux setups have no system keyring to hold it. (Windows keeps
+    // using Windows Credential Manager.) Reusing the key avoids making a new
+    // certificate on every install.
+    #[cfg(not(windows))]
+    let builder = builder.storage(Box::new(FileStorage::new("signing")));
+    let mut sideloader = builder.build();
 
     let pui = ui.clone();
     let progress = move |p: f32| {
@@ -961,7 +1051,7 @@ async fn check_developer_mode(provider: &idevice::provider::UsbmuxdProvider, ui:
                 }
                 ui.log(
                     Kind::Info,
-                    "Turn it on: Settings › Privacy & Security › Developer Mode → On, restart the phone, then tap \"Turn On\".",
+                    "Turn it on: Settings › Privacy & Security › Developer Mode › On, restart the phone, then tap \"Turn On\".",
                 );
             }
             Err(e) => crate::write_log_line("DBG ", &format!("Developer Mode check failed: {e}")),
@@ -1147,13 +1237,36 @@ mod tests {
         assert_eq!(crate::normalize_apple_id(" Me.Name@iCloud.com\u{200B} "), "Me.Name@iCloud.com");
     }
 
+    /// The failure from the person's log (2026-11-26): Apple's server didn't
+    /// answer. It must be retried and explained as a connection problem.
+    #[test]
+    fn unreachable_apple_is_a_connection_problem() {
+        let real = " ● Failed to fetch URL Bag\n ├ vendor\\isideload\\src\\auth\\grandslam.rs:60\n │\n \
+                    ● error sending request for url (https://gsa.apple.com/grandslam/GsService2/lookup)";
+        assert_eq!(classify(real), SignInProblem::Network);
+        let msg = explain(real);
+        assert!(msg.contains("not your Apple ID"), "{msg}");
+        assert!(msg.contains("VPN"), "{msg}");
+        // no arrow (the window's font can't draw it)
+        assert!(!msg.contains('→'));
+        assert!(msg.contains("Failed to fetch URL Bag › error sending request"), "{msg}");
+        // a sign-in helper server being down is still "try the next source"
+        assert_eq!(
+            classify("Failed to get anisette › error sending request for url (https://ani.example.net/v3/client_info)"),
+            SignInProblem::Server
+        );
+        // and a wrong password stays a wrong password
+        assert_eq!(classify("Auth error -22406: incorrect"), SignInProblem::Rejected);
+        assert!(advice("error sending request for url (https://developerservices2.apple.com/services/QH65B2/listTeams.action)").is_some());
+    }
+
     #[test]
     fn errors_from_the_real_log_are_explained() {
         // exactly what the library reported in the person's log
         let cert = " ● Failed to retrieve certificate identity\n ├ vendor\\isideload\\src\\sideload\\sideloader.rs:100\n │\n ● Developer error 7460: Maximum number of certificates reached\n ╰ vendor\\isideload\\src\\sideload\\cert_identity.rs:410";
         assert_eq!(
             clean(cert),
-            "Failed to retrieve certificate identity → Developer error 7460: Maximum number of certificates reached"
+            "Failed to retrieve certificate identity › Developer error 7460: Maximum number of certificates reached"
         );
         assert!(advice(cert).unwrap().contains("revoke"));
         let f = failure("Install failed", cert);

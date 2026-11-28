@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lets the desktop recognise .ipa files, so they can be opened with ipabazooka. -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-ios-app">
+    <comment>iOS app</comment>
+    <sub-class-of type="application/zip"/>
+    <glob pattern="*.ipa"/>
+  </mime-type>
+</mime-info>

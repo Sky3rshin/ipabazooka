@@ -6,25 +6,30 @@
 
 # ipabazooka
 
-### Install apps on your iPhone or iPad from Windows. No jailbreak, no installer, no experience needed.
+### Install apps on your iPhone or iPad from Windows or Linux. No jailbreak, no experience needed.
 
 A beginner-friendly Sideloadly alternative that explains what it's doing,<br>
-walks you through every step, and looks good doing it with 23 themes.
+walks you through every step, and looks good doing it with 25 themes.
 
 <br>
 
 <a href="https://github.com/Sky3rshin/ipabazooka/releases/latest/download/ipabazooka.exe"><img src="https://img.shields.io/badge/Download%20for%20Windows-ipabazooka.exe-2ea44f?style=for-the-badge" alt="Download ipabazooka.exe for Windows"></a>
+&nbsp;
+<a href="#linux"><img src="https://img.shields.io/badge/Download%20for%20Linux-.deb%20%C2%B7%20.rpm%20%C2%B7%20Arch%20%C2%B7%20AppImage-E95420?style=for-the-badge" alt="Download for Linux: .deb, .rpm, Arch package or AppImage"></a>
 
 <a href="https://github.com/Sky3rshin/ipabazooka/releases/latest"><img src="https://img.shields.io/github/v/release/Sky3rshin/ipabazooka?style=flat-square&label=latest%20version" alt="Latest version"></a>
 <a href="https://github.com/Sky3rshin/ipabazooka/releases"><img src="https://img.shields.io/github/downloads/Sky3rshin/ipabazooka/total?style=flat-square&label=downloads" alt="Downloads"></a>
 <img src="https://img.shields.io/badge/Windows-10%20%7C%2011%20(64--bit)-0078D6?style=flat-square" alt="Windows 10 and 11, 64-bit">
+<img src="https://img.shields.io/badge/Linux-Debian%20%7C%20Ubuntu%20%7C%20Fedora%20%7C%20openSUSE%20%7C%20Arch-FCC624?style=flat-square" alt="Linux: Debian, Ubuntu, Fedora, openSUSE, Arch and more">
+<a href="https://github.com/Sky3rshin/ipabazooka/actions/workflows/linux.yml"><img src="https://img.shields.io/github/actions/workflow/status/Sky3rshin/ipabazooka/linux.yml?branch=main&style=flat-square&label=Linux%20build" alt="Linux build status"></a>
 <img src="https://img.shields.io/badge/built%20with-Rust-B7410E?style=flat-square" alt="Built with Rust">
-<img src="https://img.shields.io/badge/themes-23-ff69b4?style=flat-square" alt="23 themes">
+<img src="https://img.shields.io/badge/themes-25-ff69b4?style=flat-square" alt="25 themes">
 
 <br>
 
 **[Features](#features)** &nbsp;·&nbsp;
 **[Download](#download)** &nbsp;·&nbsp;
+**[Linux](#linux)** &nbsp;·&nbsp;
 **[Quick start](#quick-start)** &nbsp;·&nbsp;
 **[Full guide](#step-by-step-guide)** &nbsp;·&nbsp;
 **[Themes](#themes)** &nbsp;·&nbsp;
@@ -101,13 +106,13 @@ See the apps you've installed, remove them, check Developer Mode and make its sw
 <tr>
 <td valign="top">
 
-**Reliable Apple sign-in**<br>
-Uses Apple's own iCloud for Windows on your PC to create sign-in data, the most trusted kind, with online servers as a backup.
+**Windows and Linux**<br>
+A single exe on Windows, and on Linux a `.deb`, `.rpm`, Arch package, AppImage or portable folder. On Windows it can even use Apple's own iCloud for Windows to create the most trusted kind of sign-in data.
 
 </td>
 <td valign="top">
 
-**23 themes**<br>
+**25 themes**<br>
 From a plain light theme to Hacker-style digital rain, Synthwave, Catppuccin, Dracula, Nord and more, many with animated backgrounds.
 
 </td>
@@ -141,11 +146,15 @@ These limits come from Apple, not ipabazooka:
 
 <div align="center">
 
-<a href="https://github.com/Sky3rshin/ipabazooka/releases/latest/download/ipabazooka.exe"><img src="https://img.shields.io/badge/Download-ipabazooka.exe-2ea44f?style=for-the-badge" alt="Download ipabazooka.exe"></a>
+<a href="https://github.com/Sky3rshin/ipabazooka/releases/latest/download/ipabazooka.exe"><img src="https://img.shields.io/badge/Windows-ipabazooka.exe-2ea44f?style=for-the-badge" alt="Download ipabazooka.exe for Windows"></a>
+&nbsp;
+<a href="#linux"><img src="https://img.shields.io/badge/Linux-packages%20%26%20AppImage-E95420?style=for-the-badge" alt="Linux downloads"></a>
 &nbsp;
 <a href="https://github.com/Sky3rshin/ipabazooka/releases/latest"><img src="https://img.shields.io/badge/All%20downloads-Releases%20page-555555?style=for-the-badge" alt="Releases page"></a>
 
 </div>
+
+### Windows
 
 | File | What it is |
 |---|---|
@@ -170,22 +179,68 @@ The `Hash` it prints should match the one on the [release page](https://github.c
 
 </details>
 
+### Linux
+
+Pick the download for your distribution from the **[latest release](https://github.com/Sky3rshin/ipabazooka/releases/latest)**. The `.deb`, `.rpm` and Arch packages add ipabazooka to your app menu, let you open `.ipa` files with it, and **install `usbmuxd` for you**. `usbmuxd` is the small service that lets Linux talk to an iPhone or iPad.
+
+| Your distribution | Download | Install it with |
+|---|---|---|
+| **Debian, Ubuntu, Linux Mint, Pop!_OS, Zorin, elementary** | `ipabazooka_<version>_amd64.deb` | `sudo apt install ./ipabazooka_*_amd64.deb` |
+| **Fedora, Nobara** | `ipabazooka-<version>-1.x86_64.rpm` | `sudo dnf install ./ipabazooka-*.x86_64.rpm` |
+| **RHEL, AlmaLinux, Rocky 10** | `ipabazooka-<version>-1.x86_64.rpm` | `sudo dnf install epel-release`, then `sudo dnf install ./ipabazooka-*.x86_64.rpm` |
+| **openSUSE Tumbleweed / Leap** | `ipabazooka-<version>-1.x86_64.rpm` | `sudo zypper install --allow-unsigned-rpm ./ipabazooka-*.x86_64.rpm` |
+| **Arch, Manjaro, EndeavourOS, CachyOS, Garuda** | `ipabazooka-<version>-1-x86_64.pkg.tar.zst` | `sudo pacman -U ./ipabazooka-*-x86_64.pkg.tar.zst` |
+| **Any distribution, nothing to install** | `ipabazooka-<version>-x86_64.AppImage` | `chmod +x ipabazooka-*.AppImage` then run it |
+| **Any distribution, portable folder** | `ipabazooka-<version>-linux-x86_64.tar.gz` | unpack it, then run `./ipabazooka`, or `./install.sh` to add it to your app menu |
+
+> [!NOTE]
+> With the **AppImage** or the **portable folder**, install `usbmuxd` yourself once: `sudo apt install usbmuxd` (Debian/Ubuntu), `sudo dnf install usbmuxd` (Fedora), `sudo zypper install usbmuxd` (openSUSE) or `sudo pacman -S usbmuxd` (Arch).
+
+<details>
+<summary><b>Linux requirements and details</b></summary>
+
+<br>
+
+- **64-bit (x86_64) Linux with glibc 2.28 or newer**: Debian 10+, Ubuntu 20.04+, Fedora 29+, RHEL/AlmaLinux/Rocky 8+, openSUSE Leap 15+, Arch and its relatives. Alpine and other musl-based systems aren't supported.
+- **A graphical desktop**: X11 or Wayland (GNOME, KDE Plasma, Xfce, Cinnamon, MATE and others).
+- The "choose a file" window uses your desktop's file picker (`xdg-desktop-portal`), or `zenity` if that isn't available. Dragging an `.ipa` onto the window always works.
+- **RHEL, AlmaLinux and Rocky:** `usbmuxd` comes from [EPEL](https://docs.fedoraproject.org/en-US/epel/) on version 10, so enable EPEL first. Version 9 doesn't package `usbmuxd` at all, not even in EPEL 9. The `.rpm` still installs and runs there, but you'd have to build `usbmuxd` yourself to connect a phone, so version 10 or Fedora is the easier choice.
+- Every package is tested automatically on Debian 12 and 13, Ubuntu 22.04 and 24.04, Fedora, AlmaLinux 9 and 10, openSUSE Tumbleweed and Arch Linux by [installing it on a fresh system and opening the app](https://github.com/Sky3rshin/ipabazooka/actions/workflows/linux.yml).
+- **Arch users:** the release also includes the `PKGBUILD`, so you can build the package yourself with `makepkg -si`.
+- **Check your download:** `sha256sum ipabazooka*` should match `SHA256SUMS-linux.txt` on the release page.
+
+</details>
+
 <br>
 
 ## Before you start
 
 You only need to do this **once per computer**.
 
+**On every computer:**
+
 | You need | Why |
 |---|---|
-| **Windows 10 or 11 (64-bit)** | ipabazooka is a Windows app. |
-| **iTunes for Windows**, the version from **apple.com** | It installs the Apple Mobile Device service that lets ipabazooka see your iPhone over USB. |
-| **iCloud for Windows**, the version from **apple.com** | It lets ipabazooka create Apple's sign-in data on your PC, which makes Apple ID sign-in work reliably. |
 | **An Apple ID** | A free one works. **A spare Apple ID is the safest choice.** |
 | **A cable** for your iPhone or iPad | A USB connection is the most reliable. |
 
+**On Windows (10 or 11, 64-bit):**
+
+| You need | Why |
+|---|---|
+| **iTunes for Windows**, the version from **apple.com** | It installs the Apple Mobile Device service that lets ipabazooka see your iPhone over USB. |
+| **iCloud for Windows**, the version from **apple.com** | It lets ipabazooka create Apple's sign-in data on your PC, which makes Apple ID sign-in work reliably. |
+
 > [!IMPORTANT]
-> Use the **web (apple.com) versions** of iTunes and iCloud, **not the Microsoft Store versions**. If you already have the Microsoft Store versions, uninstall them first.
+> On Windows, use the **web (apple.com) versions** of iTunes and iCloud, **not the Microsoft Store versions**. If you already have the Microsoft Store versions, uninstall them first.
+
+**On Linux:**
+
+| You need | Why |
+|---|---|
+| **usbmuxd** | It lets ipabazooka see your iPhone over USB. The `.deb`, `.rpm` and Arch packages install it automatically (on RHEL/Alma/Rocky 10, enable EPEL first). Linux starts it by itself whenever you plug in a phone. If it's missing, the app shows the exact command to install it on your distribution. |
+
+On Linux, Apple's sign-in data comes from online sign-in servers, because iCloud for Windows doesn't exist there. Nothing to install.
 
 <br>
 
@@ -227,7 +282,7 @@ Plug the phone into your PC with a cable and unlock it. If it asks **"Trust This
 ipabazooka looks for devices on its own every few seconds. Your phone appears in the **Device** list with its name, and the list shows whether it's connected by USB or Wi-Fi. Use the **⟳** button next to the list to look again right away.
 
 > [!TIP]
-> No phone showing? Unplug and replug the cable, unlock the phone, tap **Trust**, and make sure **iTunes from apple.com** is installed.
+> No phone showing? Unplug and replug the cable, unlock the phone, and tap **Trust**. On Windows, make sure **iTunes from apple.com** is installed. On Linux, make sure **usbmuxd** is installed. If the Trust prompt never appears on Linux, run `idevicepair pair` (from the `libimobiledevice-utils` or `libimobiledevice` package).
 
 ### 2. Choose the app (`.ipa`)
 
@@ -349,10 +404,10 @@ Click **Advanced options** (or press <kbd>Alt</kbd>+<kbd>V</kbd>) to show extra 
 | **Share the main app's ID with its extensions** | Extensions reuse the main App ID instead of each using their own. |
 | **Higher memory limit** | Asks iOS for more memory (useful for emulators and big games). |
 | **Revoke an old certificate** | Automatically makes room when you've hit the certificate limit. |
-| **Sign-in data** | **Automatic** (this PC first, then online), **This PC only**, or **Online servers only**. |
+| **Sign-in data** *(Windows)* | **Automatic** (this PC first, then online), **This PC only**, or **Online servers only**. On Linux, the online servers are always used. |
 | **Online server** | Which public sign-in data server to use, or **Custom…** for your own. |
 | **Reset sign-in data** | Clears saved sign-in data so fresh data is made. Try this when Apple says your password is wrong but it isn't. |
-| **Open saved log** | Opens the full log file in Notepad. |
+| **Open saved log** | Opens the full log file in Notepad (Windows) or your default text viewer (Linux). |
 
 </td>
 </tr>
@@ -382,7 +437,7 @@ Press **☰ History** at the bottom (or <kbd>Alt</kbd>+<kbd>.</kbd>) to show the
 - **Saved log** opens the log file, which includes extra detail.
 - **Clear** empties the on-screen log.
 
-The log is also saved to `%APPDATA%\ipabazooka\ipabazooka.log`. **Your password is never written to it.** It does include your Apple ID email address, so keep that in mind before posting it publicly.
+The log is also saved to `%APPDATA%\ipabazooka\ipabazooka.log` on Windows, or `~/.config/ipabazooka/ipabazooka.log` on Linux. **Your password is never written to it.** It does include your Apple ID email address, so keep that in mind before posting it publicly.
 
 </td>
 <td width="50%" valign="top">
@@ -445,6 +500,11 @@ Pick a theme from the **Theme** menu in the top-right corner. Your choice is rem
 <tr>
 <td align="center"><img src="docs/screenshots/themes/lava.png" alt="Lava theme"><br><sub><b>Lava</b></sub></td>
 <td align="center"><img src="docs/screenshots/themes/aurora.png" alt="Aurora theme"><br><sub><b>Aurora</b></sub></td>
+<td align="center"><img src="docs/screenshots/themes/gold-black.png" alt="Gold & Black theme"><br><sub><b>Gold &amp; Black</b></sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/screenshots/themes/gold-white.png" alt="Gold & White theme"><br><sub><b>Gold &amp; White</b></sub></td>
+<td></td>
 <td></td>
 </tr>
 </table>
@@ -468,10 +528,10 @@ ipabazooka recognizes Apple's common errors and shows a **"What to do"** tip wit
 
 | Problem or message | What to do |
 |---|---|
-| **No phone under "Device"** | Unplug and replug the cable, unlock the phone, tap **Trust**, and make sure **iTunes from apple.com** (not the Microsoft Store version) is installed. Press **⟳** to look again. |
+| **No phone under "Device"** | Unplug and replug the cable, unlock the phone, tap **Trust**, and press **⟳** to look again. **Windows:** make sure **iTunes from apple.com** (not the Microsoft Store version) is installed. **Linux:** make sure **usbmuxd** is installed (the status says *usbmuxd missing* if it isn't). If the Trust prompt never appears, run `idevicepair pair`. |
 | **Phone isn't paired** / *PairingDialogResponsePending*, *PasswordProtected* | Unlock the phone, tap **Trust** when asked, enter your passcode, and try again. |
-| **"Apple ID or password incorrect"** (-22406) when the password is right | Open Advanced options › **Reset sign-in data** and try again. Make sure the web versions of iTunes and iCloud for Windows are installed, and keep *Sign-in data* on **Automatic**. Use your **normal** Apple ID password (not an app-specific one), and sign in with the main email shown at account.apple.com › Sign-In and Security. Two-factor authentication must be **on**, and **security keys** on the account block tools like this. Tick **Show password** to check for typos. |
-| **Sign-in data not accepted** (-22410) | This is about the PC's sign-in data, not your password. Open **iCloud for Windows** once and sign in with the same Apple ID, make sure your PC's clock is set automatically, then try again. |
+| **"Apple ID or password incorrect"** (-22406) when the password is right | Open Advanced options › **Reset sign-in data** and try again. On Windows, make sure the web versions of iTunes and iCloud for Windows are installed, and keep *Sign-in data* on **Automatic**. On Linux, try another **Online server** in Advanced options. Use your **normal** Apple ID password (not an app-specific one), and sign in with the main email shown at account.apple.com › Sign-In and Security. Two-factor authentication must be **on**, and **security keys** on the account block tools like this. Tick **Show password** to check for typos. |
+| **Sign-in data not accepted** (-22410) | This is about the computer's sign-in data, not your password. Make sure your clock is set automatically. On Windows, open **iCloud for Windows** once and sign in with the same Apple ID. On Linux, press **Reset sign-in data** or pick another **Online server**. Then try again. |
 | **Apple ID is locked** (-20209) | Unlock it at iforgot.apple.com, then try again. |
 | **Certificate limit reached** (7460) | Pick an old certificate to revoke when asked, or tick **Revoke an old certificate** in Advanced options. Apps signed with a revoked certificate stop opening until you reinstall them. |
 | **App ID limit reached** (9401) | Free Apple IDs can make 10 App IDs every 7 days. Tick **Remove app extensions** or **Share the main app's ID** in Advanced options, or wait a few days. |
@@ -511,7 +571,7 @@ Your password is sent <b>only to Apple</b> to sign in. It is never written to th
 <details>
 <summary><b>What is "sign-in data" (anisette)?</b></summary>
 <br>
-Apple wants extra "machine identity" data along with every sign-in. ipabazooka gets it from Apple's own <b>iCloud for Windows</b> on your PC when it can (the most trusted kind). If that isn't available, it uses public sign-in data servers. These servers never see your password. You can choose <b>This PC only</b> in Advanced options to avoid online servers entirely.
+Apple wants extra "machine identity" data along with every sign-in. On Windows, ipabazooka gets it from Apple's own <b>iCloud for Windows</b> on your PC when it can (the most trusted kind). Otherwise, and always on Linux, it uses public sign-in data servers. These servers never see your password. On Windows you can choose <b>This PC only</b> in Advanced options to avoid online servers entirely.
 </details>
 
 <details>
@@ -535,19 +595,29 @@ Yes. In Advanced options, set <b>Signing mode</b> to <b>Export signed .ipa only<
 <details>
 <summary><b>Where are my settings stored, and how do I uninstall?</b></summary>
 <br>
-Everything is kept in <code>%APPDATA%\ipabazooka</code> (paste that into the File Explorer address bar): your theme, options, the log and saved sign-in data. To uninstall, delete <code>ipabazooka.exe</code> and that folder.
+Everything (your theme, options, the log and saved sign-in data) is kept in one folder:
+<ul>
+<li><b>Windows:</b> <code>%APPDATA%\ipabazooka</code> (paste that into the File Explorer address bar). To uninstall, delete <code>ipabazooka.exe</code> and that folder.</li>
+<li><b>Linux:</b> <code>~/.config/ipabazooka</code> (private to your user account). To uninstall, remove the package (<code>sudo apt remove ipabazooka</code>, <code>sudo dnf remove ipabazooka</code>, <code>sudo zypper remove ipabazooka</code> or <code>sudo pacman -R ipabazooka</code>), delete the AppImage, or run <code>./uninstall.sh</code> from the portable folder. Then delete that folder too if you like.</li>
+</ul>
 </details>
 
 <details>
 <summary><b>Can I use it on another computer?</b></summary>
 <br>
-Yes. Copy <code>ipabazooka.exe</code> (or the zip) to the other PC. That PC also needs the apple.com versions of iTunes and iCloud for Windows. The first install there may ask you to revoke an old certificate, which is normal for free Apple IDs.
+Yes. On Windows, copy <code>ipabazooka.exe</code> (or the zip) to the other PC. That PC also needs the apple.com versions of iTunes and iCloud for Windows. On Linux, the AppImage and the portable folder can be copied to another computer the same way (it needs <code>usbmuxd</code>). The first install on a new computer may ask you to revoke an old certificate, which is normal for free Apple IDs.
 </details>
 
 <details>
-<summary><b>Does it work on Mac or Linux?</b></summary>
+<summary><b>Does it work on Linux? On Mac?</b></summary>
 <br>
-Releases are for Windows 10 and 11 (64-bit) only.
+<b>Linux: yes.</b> There's a <code>.deb</code> (Debian, Ubuntu, Mint), an <code>.rpm</code> (Fedora, RHEL, openSUSE), an Arch package, an AppImage for any distribution, and a portable folder. See <a href="#linux">Linux downloads</a>. Mac isn't supported.
+</details>
+
+<details>
+<summary><b>Is the Linux version different from the Windows one?</b></summary>
+<br>
+It's the same app with the same features and themes. Two things work differently because of the operating system: the phone connection uses Linux's <code>usbmuxd</code> instead of iTunes, and Apple sign-in data always comes from the online sign-in servers, because iCloud for Windows doesn't exist on Linux. Your signing certificate's key is kept in <code>~/.config/ipabazooka</code>, readable only by you.
 </details>
 
 <details>
@@ -561,27 +631,35 @@ No. ipabazooka is an independent project and isn't affiliated with or endorsed b
 ## Privacy and safety
 
 - **Your password** goes only to Apple. It is never written to the log or saved to disk.
-- **Logs** stay on your PC (`%APPDATA%\ipabazooka\ipabazooka.log`) and never leave it unless you copy them yourself. They include your Apple ID email address but never your password.
-- **Sign-in data** comes from your PC's iCloud for Windows first. Online servers are only a fallback, and you can turn them off (**Sign-in data › This PC only**).
+- **Logs** stay on your computer (`%APPDATA%\ipabazooka\ipabazooka.log` on Windows, `~/.config/ipabazooka/ipabazooka.log` on Linux) and never leave it unless you copy them yourself. They include your Apple ID email address but never your password.
+- **Sign-in data** on Windows comes from your PC's iCloud for Windows first. Online servers are only a fallback, and you can turn them off (**Sign-in data › This PC only**). On Linux it comes from the online sign-in servers.
+- **Your signing certificate's key** is kept in Windows Credential Manager on Windows, and in `~/.config/ipabazooka` (readable only by you) on Linux.
 - **Only install apps you trust** and are allowed to use. A file from an unknown place can hide harmful code.
 
 <br>
 
 ## Building from source
 
-The app is written in Rust with [egui/eframe](https://github.com/emilk/egui). Releases are built on Windows with the `stable-x86_64-pc-windows-gnu` toolchain.
+The app is written in Rust with [egui/eframe](https://github.com/emilk/egui). The same code builds on Windows and Linux.
 
 ```sh
 git clone https://github.com/Sky3rshin/ipabazooka.git
 cd ipabazooka
-cargo build --release   # -> target/release/ipabazooka.exe
+cargo build --release   # -> target/release/ipabazooka(.exe)
 cargo test              # unit tests + Apple sign-in (SRP) proof check
 ```
 
-During the build, `build.rs` does two things:
+**Windows** releases are built with the `stable-x86_64-pc-windows-gnu` toolchain. During the build, `build.rs` does two things:
 
 - It compiles `helper/anisette_helper.cs` with the C# compiler that ships with Windows (.NET Framework 4 `csc.exe`). This small 32-bit helper lets the app get sign-in data from this PC's iCloud for Windows. If the compiler is missing, the app falls back to online sign-in servers.
 - It embeds the exe icon and version info with `windres` (MinGW), if it's available.
+
+**Linux** needs only Rust and a C compiler; no extra system libraries are needed to build. The [Linux workflow](.github/workflows/linux.yml) builds the release binary with [`cargo-zigbuild`](https://github.com/rust-cross/cargo-zigbuild) for glibc 2.28, so one build runs on all supported distributions. It then makes the packages with [`packaging/linux/build-packages.sh`](packaging/linux/build-packages.sh) and tests each one on a fresh install of each distribution:
+
+```sh
+cargo zigbuild --release --target x86_64-unknown-linux-gnu.2.28
+sh packaging/linux/build-packages.sh target/x86_64-unknown-linux-gnu/release/ipabazooka out
+```
 
 <details>
 <summary><b>Project layout</b></summary>
@@ -592,7 +670,8 @@ During the build, `build.rs` does two things:
 |---|---|
 | `src/main.rs` | The window: layout, help panel, dialogs, keyboard shortcuts |
 | `src/sideload.rs` | Signs in to Apple, gets a free development certificate and profile, re-signs the app and installs it |
-| `src/device.rs` | Finds plugged-in iPhones and iPads through the Apple Mobile Device service (usbmuxd) |
+| `src/device.rs` | Finds plugged-in iPhones and iPads through usbmuxd (the Apple Mobile Device service on Windows, the `usbmuxd` daemon on Linux) |
+| `src/paths.rs` | Where settings, the log and sign-in data are kept on each system |
 | `src/phone.rs` | Phone tools: list and remove installed apps, Developer Mode |
 | `src/ipa.rs` | Reads app details out of an `.ipa` file |
 | `src/local_anisette.rs` | "This PC" sign-in data from iCloud for Windows |
@@ -602,7 +681,9 @@ During the build, `build.rs` does two things:
 | `build.rs` | Builds the helper and embeds the exe icon and version info |
 | `tests/srp_check.rs` | Checks the Apple sign-in (SRP) proof against an independent implementation |
 | `vendor/isideload/` | Patched copy of the isideload library (see its `NOTICE.md`) |
-| `dist/READ ME FIRST.txt` | The read-me that ships in the release zip |
+| `dist/READ ME FIRST.txt` | The read-me that ships in the Windows zip |
+| `packaging/linux/` | Linux packaging: icons, menu entry, `.ipa` file type, `.deb`/`.rpm`/Arch/AppImage recipes, install scripts, and the CI test script |
+| `.github/workflows/linux.yml` | Builds, packages and tests the Linux version on 11 distribution setups |
 | `docs/` | README logo and screenshots |
 | `MECHANICS.md`, `mechanics.json` | Notes on the behaviour rules the app follows |
 | `shots/` | Development screenshots |

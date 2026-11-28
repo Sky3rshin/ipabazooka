@@ -28,6 +28,8 @@ pub enum Backdrop {
     Embers(Color32, Color32),
     /// slowly waving northern-lights ribbons over a night sky
     Aurora(Color32, Color32),
+    /// gold dust drifting down with little twinkling sparkles (top, bottom, gold)
+    Glitter(Color32, Color32, Color32),
 }
 
 pub struct Theme {
@@ -66,7 +68,7 @@ const fn rgb(r: u8, g: u8, b: u8) -> Color32 {
     Color32::from_rgb(r, g, b)
 }
 
-pub static THEMES: [Theme; 23] = [
+pub static THEMES: [Theme; 25] = [
     Theme {
         key: "hacker",
         name: "Hacker",
@@ -690,6 +692,62 @@ pub static THEMES: [Theme; 23] = [
         w_active: rgb(28, 64, 92),
         w_selection: rgb(30, 90, 100),
     },
+    // black background, metallic gold, gold glitter
+    Theme {
+        key: "gold-black",
+        name: "Gold & Black",
+        icon: "👑",
+        accent: rgb(212, 175, 55),
+        accent_dark: rgb(170, 134, 30),
+        bg: rgb(6, 6, 6),
+        card: Color32::from_rgba_premultiplied(14, 12, 8, 238),
+        border: rgb(122, 97, 32),
+        text: rgb(246, 232, 190),
+        muted: rgb(176, 152, 96),
+        good: rgb(130, 205, 110),
+        warn: rgb(255, 160, 40),
+        bad: rgb(240, 85, 75),
+        ink: rgb(12, 9, 2),
+        dark: true,
+        mono: false,
+        terminal: false,
+        radius: 8,
+        backdrop: Backdrop::Glitter(rgb(16, 14, 9), rgb(0, 0, 0), rgb(212, 175, 55)),
+        w_window: rgb(16, 14, 10),
+        w_extreme: rgb(4, 4, 4),
+        w_inactive: rgb(26, 23, 15),
+        w_hovered: rgb(44, 37, 18),
+        w_active: rgb(66, 54, 22),
+        w_selection: rgb(112, 90, 28),
+    },
+    // white background, rich gold, gold glitter
+    Theme {
+        key: "gold-white",
+        name: "Gold & White",
+        icon: "✨",
+        accent: rgb(186, 142, 26),
+        accent_dark: rgb(150, 112, 14),
+        bg: rgb(255, 255, 255),
+        card: rgb(255, 253, 246),
+        border: rgb(226, 204, 140),
+        text: rgb(44, 36, 18),
+        muted: rgb(132, 112, 66),
+        good: rgb(40, 140, 60),
+        warn: rgb(204, 112, 0),
+        bad: rgb(200, 45, 45),
+        ink: rgb(26, 20, 4),
+        dark: false,
+        mono: false,
+        terminal: false,
+        radius: 10,
+        backdrop: Backdrop::Glitter(rgb(255, 255, 255), rgb(250, 241, 216), rgb(205, 160, 40)),
+        w_window: Color32::WHITE,
+        w_extreme: Color32::WHITE,
+        w_inactive: rgb(251, 246, 233),
+        w_hovered: rgb(246, 236, 206),
+        w_active: rgb(238, 222, 176),
+        w_selection: rgb(242, 222, 160),
+    },
 ];
 
 static CURRENT: AtomicUsize = AtomicUsize::new(0);
@@ -714,11 +772,7 @@ pub fn font(size: f32) -> FontId {
 }
 
 fn saved_path() -> std::path::PathBuf {
-    std::env::var_os("APPDATA")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir)
-        .join("ipabazooka")
-        .join("theme.txt")
+    crate::paths::data_dir().join("theme.txt")
 }
 
 /// Loads the remembered theme (Hacker if none was saved).
@@ -888,6 +942,40 @@ pub fn paint_backdrop(ctx: &egui::Context, now: f64) {
                 let x = screen.left() + ((h >> 32) % 10_000) as f32 / 10_000.0 * screen.width() + sway;
                 let a = 110 + ((h >> 44) % 120) as u8;
                 p.circle_filled(egui::pos2(x, y as f32), r, with_alpha(color, a));
+            }
+        }
+        Backdrop::Glitter(top, bottom, gold) => {
+            gradient(&p, screen, top, bottom);
+            // fine gold dust drifting down
+            for i in 0..70i64 {
+                let h = hash(i, 91);
+                let r = 0.8 + (h % 22) as f32 / 10.0;
+                let speed = 10.0 + ((h >> 8) % 26) as f64;
+                let span = screen.height() as f64 + 20.0;
+                let y0 = ((h >> 16) % 10_000) as f64 / 10_000.0 * span;
+                let y = screen.top() as f64 - 10.0 + (y0 + now * speed) % span;
+                let sway = ((now * 0.7 + i as f64 * 0.9).sin() * (4.0 + ((h >> 40) % 8) as f64)) as f32;
+                let x = screen.left() + ((h >> 32) % 10_000) as f32 / 10_000.0 * screen.width() + sway;
+                let a = 90 + ((h >> 44) % 140) as u8;
+                p.circle_filled(egui::pos2(x, y as f32), r, with_alpha(gold, a));
+            }
+            // sparkles that fade in and out where they are
+            for i in 0..22i64 {
+                let h = hash(i, 97);
+                let x = screen.left() + (h % 10_000) as f32 / 10_000.0 * screen.width();
+                let y = screen.top() + ((h >> 16) % 10_000) as f32 / 10_000.0 * screen.height();
+                let rate = 0.6 + ((h >> 32) % 100) as f64 / 100.0;
+                let tw = (now * rate + i as f64 * 1.3).sin().max(0.0) as f32;
+                if tw <= 0.02 {
+                    continue;
+                }
+                let len = 3.0 + 5.0 * tw;
+                let c = egui::pos2(x, y);
+                let col = with_alpha(gold, (tw * 230.0) as u8);
+                let s = Stroke::new(1.2_f32, col);
+                p.line_segment([c - egui::vec2(len, 0.0), c + egui::vec2(len, 0.0)], s);
+                p.line_segment([c - egui::vec2(0.0, len), c + egui::vec2(0.0, len)], s);
+                p.circle_filled(c, 1.3 + tw, col);
             }
         }
         Backdrop::Fireflies(top, bottom) => {
@@ -1148,7 +1236,7 @@ mod tests {
     #[test]
     fn ui_symbols_can_be_drawn() {
         let ctx = ready_ctx();
-        let missing: Vec<&str> = ["⏵", "⏷", "☰", "⛶", "⟳", "📱", "…", "•", "›", "❓"]
+        let missing: Vec<&str> = ["⏵", "⏷", "☰", "⛶", "⟳", "📱", "…", "•", "›", "❓", "⚠"]
             .into_iter()
             .filter(|s| !drawable(&ctx, s))
             .collect();

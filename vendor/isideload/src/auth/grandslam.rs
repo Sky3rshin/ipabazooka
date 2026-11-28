@@ -52,12 +52,17 @@ impl GrandSlam {
         base_headers: HeaderMap,
     ) -> Result<Dictionary, Report> {
         debug!("Fetching URL bag from GrandSlam");
-        let resp = client
-            .get(URL_BAG)
-            .headers(base_headers)
-            .send()
-            .await
-            .context("Failed to fetch URL Bag")?
+        // ipabazooka patch: keep the underlying reason (DNS, connect timeout,
+        // TLS...) in the report; reqwest's own message only says "error
+        // sending request".
+        let resp = match client.get(URL_BAG).headers(base_headers).send().await {
+            Ok(resp) => resp,
+            Err(e) => {
+                Err::<(), Report>(report!("{}", error_chain(&e))).context("Failed to fetch URL Bag")?;
+                unreachable!("the line above always returns the error")
+            }
+        };
+        let resp = resp
             .text()
             .await
             .context("Failed to read URL Bag response text")?;
@@ -246,9 +251,13 @@ impl GrandSlam {
     ) -> Result<reqwest_middleware::ClientWithMiddleware, Report> {
         #[cfg(not(feature = "wasm"))]
         let cert = Certificate::from_der(APPLE_ROOT)?;
+        // ipabazooka patch: a dead connection fails after 10 s (instead of the
+        // system's ~21-30 s) so the app can retry, and no request hangs forever.
         #[cfg(not(feature = "wasm"))]
         let client = ClientBuilder::new()
             .add_root_certificate(cert)
+            .connect_timeout(std::time::Duration::from_secs(10))
+            .timeout(std::time::Duration::from_secs(90))
             .http1_title_case_headers()
             .danger_accept_invalid_certs(debug)
             .connection_verbose(debug)
@@ -265,6 +274,22 @@ impl GrandSlam {
         };
         Ok(builder.build())
     }
+}
+
+/// An error's message followed by each underlying cause, without repeats:
+/// "error sending request for url (...): client error (Connect): tcp connect error: ...".
+pub fn error_chain(e: &(dyn std::error::Error + 'static)) -> String {
+    let mut out = e.to_string();
+    let mut src = e.source();
+    while let Some(s) = src {
+        let t = s.to_string();
+        if !t.is_empty() && !out.contains(&t) {
+            out.push_str(": ");
+            out.push_str(&t);
+        }
+        src = s.source();
+    }
+    out
 }
 
 pub trait GrandSlamErrorChecker {

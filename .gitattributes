@@ -1,0 +1,9 @@
+# Linux scripts and packaging files must keep Unix line endings,
+# even when the repository is checked out on Windows.
+*.sh        text eol=lf
+*.desktop   text eol=lf
+*.spec.in   text eol=lf
+PKGBUILD*   text eol=lf
+*.yml       text eol=lf
+packaging/linux/*.xml text eol=lf
+packaging/linux/*.txt text eol=lf

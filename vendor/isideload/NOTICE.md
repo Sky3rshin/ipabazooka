@@ -13,3 +13,7 @@ Changes made for ipabazooka:
 - `src/anisette/mod.rs`: added `AnisetteData::from_parts` so ipabazooka can supply
   anisette data generated locally by Apple's iCloud for Windows (AOSKit).
 - `src/auth/grandslam.rs`: removed an unneeded `mut`.
+- `src/auth/grandslam.rs`: the HTTP client gives up connecting after 10 s and
+  on any request after 90 s, instead of hanging on a dead connection. When the
+  URL bag can't be fetched, the report keeps every underlying cause (DNS,
+  connect, TLS...) through the new `error_chain` helper.

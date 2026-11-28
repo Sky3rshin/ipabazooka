@@ -2612,7 +2612,7 @@ dependencies = [
 
 [[package]]
 name = "ipabazooka"
-version = "1.3.0"
+version = "1.5.2"
 dependencies = [
  "async-trait",
  "eframe",

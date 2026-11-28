@@ -13,10 +13,14 @@ fn main() {
     let out = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR"));
     let exe = out.join("anisette-helper.exe");
 
-    let built = std::env::var("CARGO_CFG_WINDOWS").is_ok() && compile(&exe);
+    let windows = std::env::var("CARGO_CFG_WINDOWS").is_ok();
+    let built = windows && compile(&exe);
     if !built {
         let _ = std::fs::write(&exe, b"");
-        println!("cargo:warning=local anisette helper not built (needs Windows' .NET Framework C# compiler); online sign-in servers will be used");
+        // Only worth a warning on Windows; other systems never use the helper.
+        if windows {
+            println!("cargo:warning=local anisette helper not built (needs Windows' .NET Framework C# compiler); online sign-in servers will be used");
+        }
     }
 
     // Give ipabazooka.exe its own icon and version details in File Explorer.
